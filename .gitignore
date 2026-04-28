@@ -45,3 +45,7 @@ htmlcov/
 *.tmp
 *.log
 video_cli_concat_*.txt
+
+# Claude Code - 個人メモ・作業履歴は追跡しない
+.claude/memory/
+.claude/projects/
