@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(~/.aws/credentials)",
+      "Read(~/.ssh/id_rsa)",
+      "Read(**/secrets/**)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git checkout -- *)",
+      "Bash(git branch -D*)",
+      "Bash(curl * | bash)",
+      "Bash(wget * | sh)",
+      "Bash(rm -rf /)",
+      "Bash(sudo rm*)",
+      "Bash(chmod 777*)",
+      "Bash(npm install -g*)",
+      "Bash(pip install --system*)",
+      "Bash(brew install*)",
+      "Bash(ffmpeg * /dev/*)",
+      "Bash(ffmpeg * -y /etc/*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
