@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+MANIFEST
+
+# 仮想環境
+.venv/
+venv/
+env/
+.env
+
+# テスト・カバレッジ
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+
+# 型チェック
+.mypy_cache/
+.dmypy.json
+.pytype/
+
+# エディタ
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# 一時ファイル
+*.tmp
+*.log
+video_cli_concat_*.txt
