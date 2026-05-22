@@ -9,10 +9,21 @@ FFmpeg をラップしたシンプルな動画処理 CLI ツール。
 | trim | 動画を指定した時間範囲で切り出す |
 | concat | 複数の動画を結合する（互換あり: copy / 互換なし: 再エンコード） |
 | resize | 動画の解像度を変更する |
+| volume | 音量を調整する |
+| audio_extract | 動画から音声を抽出する |
+| thumbnail | 指定秒数のフレームを画像として保存する |
+| gif | 動画を GIF に変換する |
+| speed | 動画の再生速度を変更する（0.25x〜4.0x） |
+| mute | 動画から音声を削除する |
+| convert | 動画のフォーマットを変換する（再エンコードなし） |
+| rotate | 動画を回転・反転する |
+| info | 動画の情報（解像度・コーデック・長さ等）を表示する |
+| crop | 動画の指定範囲を切り出す |
 
 ## 前提条件
 
 - Python 3.10 以上
+- [uv](https://github.com/astral-sh/uv) がインストール済み
 - ffmpeg / ffprobe がインストール済みで PATH が通っていること
 
 ```bash
@@ -24,13 +35,13 @@ brew install ffmpeg
 ```bash
 git clone <repository>
 cd video-cli
-pip install -e .
+uv sync
 ```
 
 ## 使い方
 
 ```bash
-python main.py
+uv run python main.py
 ```
 
 メニューに従って操作を選択し、ファイルパスや時間を入力する。
@@ -43,20 +54,21 @@ python main.py
 
 ```
 video-cli/
+├── CLAUDE.md            # Claude Code 向け取扱説明書
 ├── main.py              # エントリーポイント・ディスパッチ
 ├── domain/              # ドメインモデル（MediaInfo, TrimRange など）
 ├── shared/              # 共通ユーティリティ（errors, formatters）
 ├── validation/          # 入力バリデーション
-├── ffmpeg/              # FFmpeg ラッパー（probe, runner, strategy）
+├── ffmpeg/              # FFmpeg ラッパー（probe, runner, commands）
 ├── ui/                  # プロンプト・メニュー・レビュー UI
-├── usecases/            # ユースケースフロー（trim / concat / resize）
+├── usecases/            # ユースケースフロー（各機能の flow）
 └── tests/               # ユニットテスト
 ```
 
 ## テスト
 
 ```bash
-python -m pytest tests/ -v
+uv run pytest
 ```
 
 ## 設計方針
