@@ -118,6 +118,10 @@ def build_thumbnail_command(
     ]
 
 
+def build_convert_command(input_file: str, output_file: str) -> list[str]:
+    return ["ffmpeg", "-y", "-i", input_file, "-c", "copy", output_file]
+
+
 def build_mute_command(input_file: str, output_file: str) -> list[str]:
     return ["ffmpeg", "-y", "-i", input_file, "-an", output_file]
 
