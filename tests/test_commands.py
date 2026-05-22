@@ -7,6 +7,7 @@ from ffmpeg.commands import (
     build_concat_reencode_command,
     build_gif_command,
     build_resize_command,
+    build_speed_command,
     build_thumbnail_command,
     build_trim_command,
     build_volume_command,
@@ -131,6 +132,51 @@ class TestBuildVolumeCommand(unittest.TestCase):
         command = build_volume_command("in.mp4", "out.mp4", 2.0)
         copy_idx = command.index("copy")
         self.assertEqual(command[copy_idx - 1], "-c:v")
+
+
+class TestBuildSpeedCommand(unittest.TestCase):
+    def test_double_speed(self):
+        command = build_speed_command("in.mp4", "out.mp4", 2.0)
+        self.assertEqual(
+            command,
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                "in.mp4",
+                "-vf",
+                "setpts=0.5*PTS",
+                "-filter:a",
+                "atempo=2.0",
+                "-c:v",
+                "libx264",
+                "-c:a",
+                "aac",
+                "out.mp4",
+            ],
+        )
+
+    def test_half_speed(self):
+        command = build_speed_command("in.mp4", "out.mp4", 0.5)
+        self.assertIn("setpts=2.0*PTS", command)
+        self.assertIn("atempo=0.5", command)
+
+    def test_4x_speed_uses_chained_atempo(self):
+        # 4倍速は atempo 2段連結: atempo=2.0,atempo=2.0
+        command = build_speed_command("in.mp4", "out.mp4", 4.0)
+        atempo_filter = command[command.index("-filter:a") + 1]
+        self.assertEqual(atempo_filter, "atempo=2.0,atempo=2.0")
+
+    def test_025x_speed_uses_chained_atempo(self):
+        # 0.25倍速は atempo 2段連結: atempo=0.5,atempo=0.5
+        command = build_speed_command("in.mp4", "out.mp4", 0.25)
+        atempo_filter = command[command.index("-filter:a") + 1]
+        self.assertEqual(atempo_filter, "atempo=0.5,atempo=0.5")
+
+    def test_normal_speed(self):
+        command = build_speed_command("in.mp4", "out.mp4", 1.0)
+        self.assertIn("setpts=1.0*PTS", command)
+        self.assertIn("atempo=1.0", command)
 
 
 class TestBuildGifCommand(unittest.TestCase):

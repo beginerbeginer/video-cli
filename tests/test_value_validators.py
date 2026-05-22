@@ -1,7 +1,7 @@
 import unittest
 
 from shared.errors import ValidationError
-from validation.value_validators import parse_time_input, validate_dimension, validate_fps, validate_gif_width, validate_timestamp_within_duration, validate_volume_level
+from validation.value_validators import parse_time_input, validate_dimension, validate_fps, validate_gif_width, validate_speed_multiplier, validate_timestamp_within_duration, validate_volume_level
 
 
 class TestParseTimeInput(unittest.TestCase):
@@ -89,6 +89,35 @@ class TestValidateGifWidth(unittest.TestCase):
     def test_invalid_text(self):
         with self.assertRaises(ValidationError):
             validate_gif_width("abc", "幅")
+
+
+class TestValidateSpeedMultiplier(unittest.TestCase):
+    def test_valid_double(self):
+        self.assertAlmostEqual(validate_speed_multiplier("2.0", "速度"), 2.0)
+
+    def test_valid_half(self):
+        self.assertAlmostEqual(validate_speed_multiplier("0.5", "速度"), 0.5)
+
+    def test_boundary_low(self):
+        self.assertAlmostEqual(validate_speed_multiplier("0.25", "速度"), 0.25)
+
+    def test_boundary_high(self):
+        self.assertAlmostEqual(validate_speed_multiplier("4.0", "速度"), 4.0)
+
+    def test_too_small(self):
+        with self.assertRaises(ValidationError):
+            validate_speed_multiplier("0.1", "速度")
+
+    def test_too_large(self):
+        with self.assertRaises(ValidationError):
+            validate_speed_multiplier("4.1", "速度")
+
+    def test_invalid_text(self):
+        with self.assertRaises(ValidationError):
+            validate_speed_multiplier("abc", "速度")
+
+    def test_one_is_valid(self):
+        self.assertAlmostEqual(validate_speed_multiplier("1.0", "速度"), 1.0)
 
 
 class TestValidateTimestampWithinDuration(unittest.TestCase):

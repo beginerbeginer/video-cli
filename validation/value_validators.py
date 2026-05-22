@@ -72,6 +72,18 @@ def validate_gif_width(raw: str, label: str) -> int:
     return value
 
 
+def validate_speed_multiplier(raw: str, label: str) -> float:
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise ValidationError(f"{label} は数値で入力してください。") from exc
+
+    if value < 0.25 or value > 4.0:
+        raise ValidationError(f"{label} は 0.25〜4.0 の範囲で入力してください。")
+
+    return value
+
+
 def validate_timestamp_within_duration(raw: str, duration_seconds: float) -> int:
     seconds = parse_time_input(raw)
     if seconds >= duration_seconds:
