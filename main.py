@@ -7,6 +7,7 @@ from ui.main_menu import prompt_main_menu
 from usecases.concat_flow import run_concat_flow
 from usecases.resize_flow import run_resize_flow
 from usecases.trim_flow import run_trim_flow
+from usecases.volume_flow import run_volume_flow
 
 OperationHandler = Callable[[], None]
 
@@ -24,6 +25,7 @@ def build_operation_handlers() -> dict[str, OperationHandler]:
         operations.TRIM: run_trim_flow,
         operations.CONCAT: run_concat_flow,
         operations.RESIZE: run_resize_flow,
+        operations.VOLUME: run_volume_flow,
         operations.EXIT: exit_program,
     }
 

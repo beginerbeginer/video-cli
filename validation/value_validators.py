@@ -46,3 +46,15 @@ def validate_dimension(raw: str, label: str) -> int:
         raise ValidationError(f"{label} は 16〜7680 の範囲で入力してください。")
 
     return value
+
+
+def validate_volume_level(raw: str, label: str) -> float:
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise ValidationError(f"{label} は数値で入力してください。") from exc
+
+    if value < 0.0 or value > 10.0:
+        raise ValidationError(f"{label} は 0.0〜10.0 の範囲で入力してください。")
+
+    return value

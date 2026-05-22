@@ -9,6 +9,7 @@ def prompt_main_menu() -> str:
             ("動画を切り出す", operations.TRIM),
             ("動画を結合する", operations.CONCAT),
             ("動画サイズを変更する", operations.RESIZE),
+            ("音量を調整する", operations.VOLUME),
             ("終了する", operations.EXIT),
         ],
     )
