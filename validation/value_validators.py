@@ -48,6 +48,30 @@ def validate_dimension(raw: str, label: str) -> int:
     return value
 
 
+def validate_fps(raw: str, label: str) -> int:
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValidationError(f"{label} は整数で入力してください。") from exc
+
+    if value < 1 or value > 60:
+        raise ValidationError(f"{label} は 1〜60 の範囲で入力してください。")
+
+    return value
+
+
+def validate_gif_width(raw: str, label: str) -> int:
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValidationError(f"{label} は整数で入力してください。") from exc
+
+    if value < 16 or value > 1920:
+        raise ValidationError(f"{label} は 16〜1920 の範囲で入力してください。")
+
+    return value
+
+
 def validate_timestamp_within_duration(raw: str, duration_seconds: float) -> int:
     seconds = parse_time_input(raw)
     if seconds >= duration_seconds:

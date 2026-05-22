@@ -1,7 +1,7 @@
 import unittest
 
 from shared.errors import ValidationError
-from validation.value_validators import parse_time_input, validate_dimension, validate_timestamp_within_duration, validate_volume_level
+from validation.value_validators import parse_time_input, validate_dimension, validate_fps, validate_gif_width, validate_timestamp_within_duration, validate_volume_level
 
 
 class TestParseTimeInput(unittest.TestCase):
@@ -43,6 +43,52 @@ class TestValidateDimension(unittest.TestCase):
 
     def test_boundary_high(self):
         self.assertEqual(validate_dimension("7680", "幅"), 7680)
+
+
+class TestValidateFps(unittest.TestCase):
+    def test_valid(self):
+        self.assertEqual(validate_fps("10", "fps"), 10)
+
+    def test_boundary_low(self):
+        self.assertEqual(validate_fps("1", "fps"), 1)
+
+    def test_boundary_high(self):
+        self.assertEqual(validate_fps("60", "fps"), 60)
+
+    def test_too_small(self):
+        with self.assertRaises(ValidationError):
+            validate_fps("0", "fps")
+
+    def test_too_large(self):
+        with self.assertRaises(ValidationError):
+            validate_fps("61", "fps")
+
+    def test_invalid_text(self):
+        with self.assertRaises(ValidationError):
+            validate_fps("abc", "fps")
+
+
+class TestValidateGifWidth(unittest.TestCase):
+    def test_valid(self):
+        self.assertEqual(validate_gif_width("480", "幅"), 480)
+
+    def test_boundary_low(self):
+        self.assertEqual(validate_gif_width("16", "幅"), 16)
+
+    def test_boundary_high(self):
+        self.assertEqual(validate_gif_width("1920", "幅"), 1920)
+
+    def test_too_small(self):
+        with self.assertRaises(ValidationError):
+            validate_gif_width("8", "幅")
+
+    def test_too_large(self):
+        with self.assertRaises(ValidationError):
+            validate_gif_width("1921", "幅")
+
+    def test_invalid_text(self):
+        with self.assertRaises(ValidationError):
+            validate_gif_width("abc", "幅")
 
 
 class TestValidateTimestampWithinDuration(unittest.TestCase):

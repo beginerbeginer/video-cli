@@ -5,6 +5,7 @@ from ffmpeg.commands import (
     build_audio_extract_command,
     build_concat_copy_command,
     build_concat_reencode_command,
+    build_gif_command,
     build_resize_command,
     build_thumbnail_command,
     build_trim_command,
@@ -130,6 +131,33 @@ class TestBuildVolumeCommand(unittest.TestCase):
         command = build_volume_command("in.mp4", "out.mp4", 2.0)
         copy_idx = command.index("copy")
         self.assertEqual(command[copy_idx - 1], "-c:v")
+
+
+class TestBuildGifCommand(unittest.TestCase):
+    def test_basic(self):
+        command = build_gif_command("in.mp4", "out.gif", 10, 480)
+        self.assertEqual(
+            command,
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                "in.mp4",
+                "-vf",
+                "fps=10,scale=480:-1:flags=lanczos",
+                "out.gif",
+            ],
+        )
+
+    def test_filter_contains_fps(self):
+        command = build_gif_command("in.mp4", "out.gif", 15, 320)
+        vf_idx = command.index("-vf")
+        self.assertIn("fps=15", command[vf_idx + 1])
+
+    def test_filter_contains_scale(self):
+        command = build_gif_command("in.mp4", "out.gif", 10, 640)
+        vf_idx = command.index("-vf")
+        self.assertIn("scale=640:-1", command[vf_idx + 1])
 
 
 class TestBuildThumbnailCommand(unittest.TestCase):
