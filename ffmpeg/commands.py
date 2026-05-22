@@ -148,7 +148,7 @@ def build_rotate_command(input_file: str, output_file: str, direction: str) -> l
 
 
 def build_mute_command(input_file: str, output_file: str) -> list[str]:
-    return ["ffmpeg", "-y", "-i", input_file, "-an", output_file]
+    return ["ffmpeg", "-y", "-i", input_file, "-an", "-c:v", "copy", output_file]
 
 
 def build_audio_extract_command(

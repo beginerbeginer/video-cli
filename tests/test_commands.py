@@ -283,12 +283,17 @@ class TestBuildMuteCommand(unittest.TestCase):
         command = build_mute_command("in.mp4", "out.mp4")
         self.assertEqual(
             command,
-            ["ffmpeg", "-y", "-i", "in.mp4", "-an", "out.mp4"],
+            ["ffmpeg", "-y", "-i", "in.mp4", "-an", "-c:v", "copy", "out.mp4"],
         )
 
     def test_no_audio_flag(self):
         command = build_mute_command("in.mp4", "out.mp4")
         self.assertIn("-an", command)
+
+    def test_video_stream_copied(self):
+        command = build_mute_command("in.mp4", "out.mp4")
+        copy_idx = command.index("copy")
+        self.assertEqual(command[copy_idx - 1], "-c:v")
 
     def test_video_stream_preserved(self):
         command = build_mute_command("in.mp4", "out.mp4")
