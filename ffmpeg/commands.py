@@ -47,6 +47,24 @@ def build_resize_command(
     ]
 
 
+def build_volume_command(
+    input_file: str,
+    output_file: str,
+    volume_level: float,
+) -> list[str]:
+    return [
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_file,
+        "-filter:a",
+        f"volume={volume_level}",
+        "-c:v",
+        "copy",
+        output_file,
+    ]
+
+
 def create_concat_list_file(input_files: list[str]) -> str:
     temp = NamedTemporaryFile(
         mode="w",

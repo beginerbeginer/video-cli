@@ -1,7 +1,7 @@
 import unittest
 
 from shared.errors import ValidationError
-from validation.value_validators import parse_time_input, validate_dimension
+from validation.value_validators import parse_time_input, validate_dimension, validate_volume_level
 
 
 class TestParseTimeInput(unittest.TestCase):
@@ -43,6 +43,32 @@ class TestValidateDimension(unittest.TestCase):
 
     def test_boundary_high(self):
         self.assertEqual(validate_dimension("7680", "幅"), 7680)
+
+
+class TestValidateVolumeLevel(unittest.TestCase):
+    def test_valid_float(self):
+        self.assertAlmostEqual(validate_volume_level("1.5", "音量"), 1.5)
+
+    def test_valid_integer_string(self):
+        self.assertAlmostEqual(validate_volume_level("2", "音量"), 2.0)
+
+    def test_boundary_zero(self):
+        self.assertAlmostEqual(validate_volume_level("0.0", "音量"), 0.0)
+
+    def test_boundary_max(self):
+        self.assertAlmostEqual(validate_volume_level("10.0", "音量"), 10.0)
+
+    def test_invalid_text(self):
+        with self.assertRaises(ValidationError):
+            validate_volume_level("abc", "音量")
+
+    def test_too_small(self):
+        with self.assertRaises(ValidationError):
+            validate_volume_level("-0.1", "音量")
+
+    def test_too_large(self):
+        with self.assertRaises(ValidationError):
+            validate_volume_level("10.1", "音量")
 
 
 if __name__ == "__main__":

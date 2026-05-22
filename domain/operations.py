@@ -1,4 +1,5 @@
 TRIM = "trim"
 CONCAT = "concat"
 RESIZE = "resize"
+VOLUME = "volume"
 EXIT = "exit"
