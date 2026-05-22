@@ -37,6 +37,15 @@ def validate_audio_output_extension(file_path: str) -> None:
         )
 
 
+def validate_different_extension(input_file: str, output_file: str) -> None:
+    in_ext = Path(input_file).suffix.lower()
+    out_ext = Path(output_file).suffix.lower()
+    if in_ext == out_ext:
+        raise ValidationError(
+            f"入力と出力の拡張子が同じです: {in_ext}\n変換するには異なる拡張子を指定してください。"
+        )
+
+
 def validate_gif_output_extension(file_path: str) -> None:
     ext = Path(file_path).suffix.lower()
     if ext not in SUPPORTED_GIF_EXTENSIONS:

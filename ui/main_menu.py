@@ -15,6 +15,7 @@ def prompt_main_menu() -> str:
             ("GIFに変換する", operations.GIF),
             ("速度を変更する", operations.SPEED),
             ("音声を削除する", operations.MUTE),
+            ("フォーマットを変換する", operations.CONVERT),
             ("終了する", operations.EXIT),
         ],
     )

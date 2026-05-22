@@ -5,6 +5,7 @@ from ffmpeg.commands import (
     build_audio_extract_command,
     build_concat_copy_command,
     build_concat_reencode_command,
+    build_convert_command,
     build_gif_command,
     build_mute_command,
     build_resize_command,
@@ -260,6 +261,20 @@ class TestBuildAudioExtractCommand(unittest.TestCase):
         command = build_audio_extract_command("in.mp4", "out.mp3")
         copy_idx = command.index("copy")
         self.assertEqual(command[copy_idx - 1], "-c:a")
+
+
+class TestBuildConvertCommand(unittest.TestCase):
+    def test_basic(self):
+        command = build_convert_command("in.mov", "out.mp4")
+        self.assertEqual(
+            command,
+            ["ffmpeg", "-y", "-i", "in.mov", "-c", "copy", "out.mp4"],
+        )
+
+    def test_no_reencode(self):
+        command = build_convert_command("in.mov", "out.mp4")
+        copy_idx = command.index("copy")
+        self.assertEqual(command[copy_idx - 1], "-c")
 
 
 class TestBuildMuteCommand(unittest.TestCase):
