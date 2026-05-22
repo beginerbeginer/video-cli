@@ -5,6 +5,7 @@ from pathlib import Path
 from shared.errors import ValidationError
 from validation.file_validators import (
     validate_audio_output_extension,
+    validate_image_output_extension,
     validate_input_file_exists,
     validate_output_directory_exists,
     validate_video_file_extension,
@@ -57,6 +58,25 @@ class TestValidateAudioOutputExtension(unittest.TestCase):
     def test_txt_raises(self):
         with self.assertRaises(ValidationError):
             validate_audio_output_extension("output.txt")
+
+
+class TestValidateImageOutputExtension(unittest.TestCase):
+    def test_jpg_passes(self):
+        validate_image_output_extension("output.jpg")
+
+    def test_jpeg_passes(self):
+        validate_image_output_extension("output.jpeg")
+
+    def test_png_passes(self):
+        validate_image_output_extension("output.png")
+
+    def test_mp4_raises(self):
+        with self.assertRaises(ValidationError):
+            validate_image_output_extension("output.mp4")
+
+    def test_txt_raises(self):
+        with self.assertRaises(ValidationError):
+            validate_image_output_extension("output.txt")
 
 
 if __name__ == "__main__":
