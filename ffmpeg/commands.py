@@ -122,6 +122,31 @@ def build_convert_command(input_file: str, output_file: str) -> list[str]:
     return ["ffmpeg", "-y", "-i", input_file, "-c", "copy", output_file]
 
 
+ROTATE_FILTERS: dict[str, str] = {
+    "right90": "transpose=1",
+    "left90": "transpose=2",
+    "rot180": "transpose=1,transpose=1",
+    "hflip": "hflip",
+    "vflip": "vflip",
+}
+
+
+def build_rotate_command(input_file: str, output_file: str, direction: str) -> list[str]:
+    return [
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_file,
+        "-vf",
+        ROTATE_FILTERS[direction],
+        "-c:v",
+        "libx264",
+        "-c:a",
+        "aac",
+        output_file,
+    ]
+
+
 def build_mute_command(input_file: str, output_file: str) -> list[str]:
     return ["ffmpeg", "-y", "-i", input_file, "-an", output_file]
 

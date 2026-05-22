@@ -9,6 +9,7 @@ from ffmpeg.commands import (
     build_gif_command,
     build_mute_command,
     build_resize_command,
+    build_rotate_command,
     build_speed_command,
     build_thumbnail_command,
     build_trim_command,
@@ -292,6 +293,35 @@ class TestBuildMuteCommand(unittest.TestCase):
     def test_video_stream_preserved(self):
         command = build_mute_command("in.mp4", "out.mp4")
         self.assertNotIn("-vn", command)
+
+
+class TestBuildRotateCommand(unittest.TestCase):
+    def test_right90(self):
+        command = build_rotate_command("in.mp4", "out.mp4", "right90")
+        self.assertEqual(
+            command,
+            ["ffmpeg", "-y", "-i", "in.mp4", "-vf", "transpose=1", "-c:v", "libx264", "-c:a", "aac", "out.mp4"],
+        )
+
+    def test_left90(self):
+        command = build_rotate_command("in.mp4", "out.mp4", "left90")
+        vf_idx = command.index("-vf")
+        self.assertEqual(command[vf_idx + 1], "transpose=2")
+
+    def test_rot180(self):
+        command = build_rotate_command("in.mp4", "out.mp4", "rot180")
+        vf_idx = command.index("-vf")
+        self.assertEqual(command[vf_idx + 1], "transpose=1,transpose=1")
+
+    def test_hflip(self):
+        command = build_rotate_command("in.mp4", "out.mp4", "hflip")
+        vf_idx = command.index("-vf")
+        self.assertEqual(command[vf_idx + 1], "hflip")
+
+    def test_vflip(self):
+        command = build_rotate_command("in.mp4", "out.mp4", "vflip")
+        vf_idx = command.index("-vf")
+        self.assertEqual(command[vf_idx + 1], "vflip")
 
 
 if __name__ == "__main__":
