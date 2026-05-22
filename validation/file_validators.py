@@ -4,6 +4,7 @@ from shared.errors import ValidationError
 
 SUPPORTED_VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".avi", ".webm"}
 SUPPORTED_AUDIO_EXTENSIONS = {".mp3", ".aac", ".wav", ".m4a"}
+SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 
 
 def validate_input_file_exists(file_path: str) -> None:
@@ -32,6 +33,15 @@ def validate_audio_output_extension(file_path: str) -> None:
         supported = ", ".join(sorted(SUPPORTED_AUDIO_EXTENSIONS))
         raise ValidationError(
             f"対応していない音声拡張子です: {ext}\n対応形式: {supported}"
+        )
+
+
+def validate_image_output_extension(file_path: str) -> None:
+    ext = Path(file_path).suffix.lower()
+    if ext not in SUPPORTED_IMAGE_EXTENSIONS:
+        supported = ", ".join(sorted(SUPPORTED_IMAGE_EXTENSIONS))
+        raise ValidationError(
+            f"対応していない画像拡張子です: {ext}\n対応形式: {supported}"
         )
 
 

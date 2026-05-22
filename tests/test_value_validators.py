@@ -1,7 +1,7 @@
 import unittest
 
 from shared.errors import ValidationError
-from validation.value_validators import parse_time_input, validate_dimension, validate_volume_level
+from validation.value_validators import parse_time_input, validate_dimension, validate_timestamp_within_duration, validate_volume_level
 
 
 class TestParseTimeInput(unittest.TestCase):
@@ -43,6 +43,29 @@ class TestValidateDimension(unittest.TestCase):
 
     def test_boundary_high(self):
         self.assertEqual(validate_dimension("7680", "幅"), 7680)
+
+
+class TestValidateTimestampWithinDuration(unittest.TestCase):
+    def test_valid_seconds(self):
+        self.assertEqual(validate_timestamp_within_duration("10", 30), 10)
+
+    def test_valid_hhmmss(self):
+        self.assertEqual(validate_timestamp_within_duration("00:00:10", 30), 10)
+
+    def test_zero_passes(self):
+        self.assertEqual(validate_timestamp_within_duration("0", 30), 0)
+
+    def test_exactly_at_duration_raises(self):
+        with self.assertRaises(ValidationError):
+            validate_timestamp_within_duration("30", 30)
+
+    def test_exceeds_duration_raises(self):
+        with self.assertRaises(ValidationError):
+            validate_timestamp_within_duration("60", 30)
+
+    def test_invalid_format_raises(self):
+        with self.assertRaises(ValidationError):
+            validate_timestamp_within_duration("abc", 30)
 
 
 class TestValidateVolumeLevel(unittest.TestCase):

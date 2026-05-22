@@ -47,6 +47,24 @@ def build_resize_command(
     ]
 
 
+def build_thumbnail_command(
+    input_file: str,
+    output_file: str,
+    timestamp_seconds: int,
+) -> list[str]:
+    return [
+        "ffmpeg",
+        "-y",
+        "-ss",
+        str(timestamp_seconds),
+        "-i",
+        input_file,
+        "-vframes",
+        "1",
+        output_file,
+    ]
+
+
 def build_audio_extract_command(
     input_file: str,
     output_file: str,

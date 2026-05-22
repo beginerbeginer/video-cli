@@ -6,6 +6,7 @@ from ffmpeg.commands import (
     build_concat_copy_command,
     build_concat_reencode_command,
     build_resize_command,
+    build_thumbnail_command,
     build_trim_command,
     build_volume_command,
 )
@@ -129,6 +130,34 @@ class TestBuildVolumeCommand(unittest.TestCase):
         command = build_volume_command("in.mp4", "out.mp4", 2.0)
         copy_idx = command.index("copy")
         self.assertEqual(command[copy_idx - 1], "-c:v")
+
+
+class TestBuildThumbnailCommand(unittest.TestCase):
+    def test_basic(self):
+        command = build_thumbnail_command("in.mp4", "out.jpg", 10)
+        self.assertEqual(
+            command,
+            [
+                "ffmpeg",
+                "-y",
+                "-ss",
+                "10",
+                "-i",
+                "in.mp4",
+                "-vframes",
+                "1",
+                "out.jpg",
+            ],
+        )
+
+    def test_timestamp_zero(self):
+        command = build_thumbnail_command("in.mp4", "out.jpg", 0)
+        self.assertIn("0", command)
+
+    def test_single_frame(self):
+        command = build_thumbnail_command("in.mp4", "out.png", 5)
+        vframes_idx = command.index("-vframes")
+        self.assertEqual(command[vframes_idx + 1], "1")
 
 
 class TestBuildAudioExtractCommand(unittest.TestCase):
