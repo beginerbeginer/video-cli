@@ -10,6 +10,7 @@ from usecases.trim_flow import run_trim_flow
 from usecases.audio_extract_flow import run_audio_extract_flow
 from usecases.gif_flow import run_gif_flow
 from usecases.convert_flow import run_convert_flow
+from usecases.rotate_flow import run_rotate_flow
 from usecases.mute_flow import run_mute_flow
 from usecases.speed_flow import run_speed_flow
 from usecases.thumbnail_flow import run_thumbnail_flow
@@ -38,6 +39,7 @@ def build_operation_handlers() -> dict[str, OperationHandler]:
         operations.SPEED: run_speed_flow,
         operations.MUTE: run_mute_flow,
         operations.CONVERT: run_convert_flow,
+        operations.ROTATE: run_rotate_flow,
         operations.EXIT: exit_program,
     }
 

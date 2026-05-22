@@ -16,6 +16,7 @@ def prompt_main_menu() -> str:
             ("速度を変更する", operations.SPEED),
             ("音声を削除する", operations.MUTE),
             ("フォーマットを変換する", operations.CONVERT),
+            ("回転・反転する", operations.ROTATE),
             ("終了する", operations.EXIT),
         ],
     )
