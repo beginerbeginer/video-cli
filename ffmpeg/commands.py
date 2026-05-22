@@ -122,6 +122,29 @@ def build_convert_command(input_file: str, output_file: str) -> list[str]:
     return ["ffmpeg", "-y", "-i", input_file, "-c", "copy", output_file]
 
 
+def build_crop_command(
+    input_file: str,
+    output_file: str,
+    width: int,
+    height: int,
+    x: int,
+    y: int,
+) -> list[str]:
+    return [
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_file,
+        "-vf",
+        f"crop={width}:{height}:{x}:{y}",
+        "-c:v",
+        "libx264",
+        "-c:a",
+        "aac",
+        output_file,
+    ]
+
+
 ROTATE_FILTERS: dict[str, str] = {
     "right90": "transpose=1",
     "left90": "transpose=2",
