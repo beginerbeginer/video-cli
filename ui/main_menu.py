@@ -12,6 +12,7 @@ def prompt_main_menu() -> str:
             ("音量を調整する", operations.VOLUME),
             ("音声を抽出する", operations.AUDIO_EXTRACT),
             ("サムネイルを抽出する", operations.THUMBNAIL),
+            ("GIFに変換する", operations.GIF),
             ("終了する", operations.EXIT),
         ],
     )

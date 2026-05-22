@@ -47,6 +47,23 @@ def build_resize_command(
     ]
 
 
+def build_gif_command(
+    input_file: str,
+    output_file: str,
+    fps: int,
+    width: int,
+) -> list[str]:
+    return [
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_file,
+        "-vf",
+        f"fps={fps},scale={width}:-1:flags=lanczos",
+        output_file,
+    ]
+
+
 def build_thumbnail_command(
     input_file: str,
     output_file: str,

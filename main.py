@@ -8,6 +8,7 @@ from usecases.concat_flow import run_concat_flow
 from usecases.resize_flow import run_resize_flow
 from usecases.trim_flow import run_trim_flow
 from usecases.audio_extract_flow import run_audio_extract_flow
+from usecases.gif_flow import run_gif_flow
 from usecases.thumbnail_flow import run_thumbnail_flow
 from usecases.volume_flow import run_volume_flow
 
@@ -30,6 +31,7 @@ def build_operation_handlers() -> dict[str, OperationHandler]:
         operations.VOLUME: run_volume_flow,
         operations.AUDIO_EXTRACT: run_audio_extract_flow,
         operations.THUMBNAIL: run_thumbnail_flow,
+        operations.GIF: run_gif_flow,
         operations.EXIT: exit_program,
     }
 
