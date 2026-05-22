@@ -47,6 +47,42 @@ def build_resize_command(
     ]
 
 
+def build_atempo_filter(speed: float) -> str:
+    filters = []
+    s = speed
+    while s > 2.0:
+        filters.append("atempo=2.0")
+        s /= 2.0
+    while s < 0.5:
+        filters.append("atempo=0.5")
+        s /= 0.5
+    filters.append(f"atempo={s}")
+    return ",".join(filters)
+
+
+def build_speed_command(
+    input_file: str,
+    output_file: str,
+    speed: float,
+) -> list[str]:
+    pts_factor = round(1.0 / speed, 10)
+    return [
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_file,
+        "-vf",
+        f"setpts={pts_factor}*PTS",
+        "-filter:a",
+        build_atempo_filter(speed),
+        "-c:v",
+        "libx264",
+        "-c:a",
+        "aac",
+        output_file,
+    ]
+
+
 def build_gif_command(
     input_file: str,
     output_file: str,
