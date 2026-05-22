@@ -14,6 +14,7 @@ def prompt_main_menu() -> str:
             ("サムネイルを抽出する", operations.THUMBNAIL),
             ("GIFに変換する", operations.GIF),
             ("速度を変更する", operations.SPEED),
+            ("音声を削除する", operations.MUTE),
             ("終了する", operations.EXIT),
         ],
     )
