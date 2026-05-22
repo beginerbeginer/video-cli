@@ -4,6 +4,7 @@ from pathlib import Path
 
 from shared.errors import ValidationError
 from validation.file_validators import (
+    validate_audio_output_extension,
     validate_input_file_exists,
     validate_output_directory_exists,
     validate_video_file_extension,
@@ -34,6 +35,28 @@ class TestFileValidators(unittest.TestCase):
     def test_validate_output_directory_exists_raises_for_missing_directory(self):
         with self.assertRaises(ValidationError):
             validate_output_directory_exists("/not/existing/dir/out.mp4")
+
+
+class TestValidateAudioOutputExtension(unittest.TestCase):
+    def test_mp3_passes(self):
+        validate_audio_output_extension("output.mp3")
+
+    def test_aac_passes(self):
+        validate_audio_output_extension("output.aac")
+
+    def test_wav_passes(self):
+        validate_audio_output_extension("output.wav")
+
+    def test_m4a_passes(self):
+        validate_audio_output_extension("output.m4a")
+
+    def test_unsupported_raises(self):
+        with self.assertRaises(ValidationError):
+            validate_audio_output_extension("output.mp4")
+
+    def test_txt_raises(self):
+        with self.assertRaises(ValidationError):
+            validate_audio_output_extension("output.txt")
 
 
 if __name__ == "__main__":

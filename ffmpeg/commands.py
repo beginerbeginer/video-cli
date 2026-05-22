@@ -47,6 +47,22 @@ def build_resize_command(
     ]
 
 
+def build_audio_extract_command(
+    input_file: str,
+    output_file: str,
+) -> list[str]:
+    return [
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_file,
+        "-vn",
+        "-c:a",
+        "copy",
+        output_file,
+    ]
+
+
 def build_volume_command(
     input_file: str,
     output_file: str,
