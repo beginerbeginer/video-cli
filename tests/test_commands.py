@@ -6,6 +6,7 @@ from ffmpeg.commands import (
     build_concat_copy_command,
     build_concat_reencode_command,
     build_convert_command,
+    build_crop_command,
     build_gif_command,
     build_mute_command,
     build_resize_command,
@@ -298,6 +299,24 @@ class TestBuildMuteCommand(unittest.TestCase):
     def test_video_stream_preserved(self):
         command = build_mute_command("in.mp4", "out.mp4")
         self.assertNotIn("-vn", command)
+
+
+class TestBuildCropCommand(unittest.TestCase):
+    def test_basic(self):
+        command = build_crop_command("in.mp4", "out.mp4", width=640, height=360, x=0, y=0)
+        self.assertEqual(
+            command,
+            ["ffmpeg", "-y", "-i", "in.mp4", "-vf", "crop=640:360:0:0", "-c:v", "libx264", "-c:a", "aac", "out.mp4"],
+        )
+
+    def test_vf_filter_format(self):
+        command = build_crop_command("in.mp4", "out.mp4", width=320, height=240, x=100, y=50)
+        vf_idx = command.index("-vf")
+        self.assertEqual(command[vf_idx + 1], "crop=320:240:100:50")
+
+    def test_offset_zero(self):
+        command = build_crop_command("in.mp4", "out.mp4", width=1280, height=720, x=0, y=0)
+        self.assertIn("crop=1280:720:0:0", command)
 
 
 class TestBuildRotateCommand(unittest.TestCase):

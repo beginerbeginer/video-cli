@@ -1,7 +1,7 @@
 import unittest
 
 from shared.errors import ValidationError
-from validation.value_validators import parse_time_input, validate_dimension, validate_fps, validate_gif_width, validate_speed_multiplier, validate_timestamp_within_duration, validate_volume_level
+from validation.value_validators import parse_time_input, validate_crop_dimension, validate_crop_offset, validate_dimension, validate_fps, validate_gif_width, validate_speed_multiplier, validate_timestamp_within_duration, validate_volume_level
 
 
 class TestParseTimeInput(unittest.TestCase):
@@ -167,6 +167,49 @@ class TestValidateVolumeLevel(unittest.TestCase):
     def test_too_large(self):
         with self.assertRaises(ValidationError):
             validate_volume_level("10.1", "音量")
+
+
+class TestValidateCropDimension(unittest.TestCase):
+    def test_valid(self):
+        self.assertEqual(validate_crop_dimension("320", "幅"), 320)
+
+    def test_boundary_min(self):
+        self.assertEqual(validate_crop_dimension("2", "幅"), 2)
+
+    def test_boundary_max(self):
+        self.assertEqual(validate_crop_dimension("7680", "幅"), 7680)
+
+    def test_too_small(self):
+        with self.assertRaises(ValidationError):
+            validate_crop_dimension("1", "幅")
+
+    def test_too_large(self):
+        with self.assertRaises(ValidationError):
+            validate_crop_dimension("7681", "幅")
+
+    def test_non_integer(self):
+        with self.assertRaises(ValidationError):
+            validate_crop_dimension("abc", "幅")
+
+    def test_float_string(self):
+        with self.assertRaises(ValidationError):
+            validate_crop_dimension("1.5", "幅")
+
+
+class TestValidateCropOffset(unittest.TestCase):
+    def test_valid(self):
+        self.assertEqual(validate_crop_offset("100", "X座標"), 100)
+
+    def test_zero_passes(self):
+        self.assertEqual(validate_crop_offset("0", "X座標"), 0)
+
+    def test_negative_raises(self):
+        with self.assertRaises(ValidationError):
+            validate_crop_offset("-1", "X座標")
+
+    def test_non_integer(self):
+        with self.assertRaises(ValidationError):
+            validate_crop_offset("abc", "X座標")
 
 
 if __name__ == "__main__":

@@ -93,6 +93,30 @@ def validate_timestamp_within_duration(raw: str, duration_seconds: float) -> int
     return seconds
 
 
+def validate_crop_dimension(raw: str, label: str) -> int:
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValidationError(f"{label} は整数で入力してください。") from exc
+
+    if value < 2 or value > 7680:
+        raise ValidationError(f"{label} は 2〜7680 の範囲で入力してください。")
+
+    return value
+
+
+def validate_crop_offset(raw: str, label: str) -> int:
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValidationError(f"{label} は整数で入力してください。") from exc
+
+    if value < 0:
+        raise ValidationError(f"{label} は 0 以上の整数で入力してください。")
+
+    return value
+
+
 def validate_volume_level(raw: str, label: str) -> float:
     try:
         value = float(raw)
