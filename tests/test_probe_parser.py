@@ -27,6 +27,9 @@ class TestParseFps(unittest.TestCase):
     def test_invalid(self):
         self.assertIsNone(parse_fps("not_a_number"))
 
+    def test_zero_denominator(self):
+        self.assertIsNone(parse_fps("1/0"))
+
 
 class TestFindStream(unittest.TestCase):
     def test_find_video(self):
