@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import subprocess
+from dataclasses import dataclass
 
 from shared.command_formatter import format_command
 from shared.errors import FfmpegExecutionError

@@ -144,7 +144,9 @@ def edit_concat_form(form: ConcatForm) -> ConcatForm:
         return replace(form, count_raw=value)
 
     if field == "output_file":
-        value = require_non_empty(ask_text("出力ファイルを再入力してください", default=form.output_file), "出力ファイル")
+        value = require_non_empty(
+            ask_text("出力ファイルを再入力してください", default=form.output_file), "出力ファイル"
+        )
         return replace(form, output_file=value)
 
     index = int(field.split("_")[1])
