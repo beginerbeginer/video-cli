@@ -16,20 +16,13 @@ def are_concat_streams_compatible(media_infos: list[MediaInfo]) -> bool:
         return True
 
     first = MediaFingerprint.from_media_info(media_infos[0])
-    return all(
-        MediaFingerprint.from_media_info(current) == first
-        for current in media_infos[1:]
-    )
+    return all(MediaFingerprint.from_media_info(current) == first for current in media_infos[1:])
 
 
 def format_video_desc(media: MediaInfo) -> str:
     if media.video is None:
         return "なし"
-    return (
-        f"{media.video.codec_name}, "
-        f"{media.video.width}x{media.video.height}, "
-        f"{media.video.fps}"
-    )
+    return f"{media.video.codec_name}, {media.video.width}x{media.video.height}, {media.video.fps}"
 
 
 def format_audio_desc(media: MediaInfo) -> str:
@@ -54,11 +47,6 @@ def format_compatibility_verdict(compatible: bool) -> str:
 
 
 def build_concat_compatibility_report(media_infos: list[MediaInfo]) -> str:
-    entries = [
-        format_compatibility_entry(i, m)
-        for i, m in enumerate(media_infos, start=1)
-    ]
-    verdict = format_compatibility_verdict(
-        are_concat_streams_compatible(media_infos)
-    )
+    entries = [format_compatibility_entry(i, m) for i, m in enumerate(media_infos, start=1)]
+    verdict = format_compatibility_verdict(are_concat_streams_compatible(media_infos))
     return "\n".join(["結合互換性チェック結果:"] + entries + [verdict])

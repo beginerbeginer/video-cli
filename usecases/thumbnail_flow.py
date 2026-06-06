@@ -120,6 +120,7 @@ def handle_thumbnail_review(form: ThumbnailForm) -> FlowResult:
 
 def execute_thumbnail(form: ThumbnailForm, dry_run: bool = False) -> None:
     from validation.value_validators import parse_time_input
+
     timestamp_seconds = parse_time_input(form.timestamp_raw)
 
     command = build_thumbnail_command(

@@ -18,10 +18,7 @@ def run_ffmpeg(command: list[str], dry_run: bool = False) -> RunResult:
     try:
         subprocess.run(command, check=True)
     except subprocess.CalledProcessError as exc:
-        detail = (
-            f"終了コード: {exc.returncode}\n"
-            f"実行コマンド: {format_command(command)}"
-        )
+        detail = f"終了コード: {exc.returncode}\n実行コマンド: {format_command(command)}"
         raise FfmpegExecutionError(
             "FFmpeg の実行に失敗しました。",
             detail=detail,

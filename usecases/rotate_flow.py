@@ -74,21 +74,25 @@ def collect_rotate_input(form: RotateForm):
 
 
 def build_rotate_summary(form: RotateForm, media_info) -> str:
-    return "\n".join([
-        "実行内容:",
-        "- 操作: 回転・反転",
-        f"- 入力: {form.input_file}",
-        f"- 方向: {_DIRECTION_DISPLAY.get(form.direction, form.direction)}（{ROTATE_FILTERS[form.direction]}）",
-        f"- 出力: {form.output_file}",
-    ])
+    return "\n".join(
+        [
+            "実行内容:",
+            "- 操作: 回転・反転",
+            f"- 入力: {form.input_file}",
+            f"- 方向: {_DIRECTION_DISPLAY.get(form.direction, form.direction)}（{ROTATE_FILTERS[form.direction]}）",
+            f"- 出力: {form.output_file}",
+        ]
+    )
 
 
 def edit_rotate_form(form: RotateForm) -> RotateForm:
-    field = ask_field_to_edit([
-        ("入力ファイル", "input_file"),
-        ("方向", "direction"),
-        ("出力ファイル", "output_file"),
-    ])
+    field = ask_field_to_edit(
+        [
+            ("入力ファイル", "input_file"),
+            ("方向", "direction"),
+            ("出力ファイル", "output_file"),
+        ]
+    )
     if field == "direction":
         value = ask_rotate_direction(form.direction)
     else:
@@ -106,16 +110,19 @@ def handle_rotate_review(form: RotateForm) -> FlowResult:
 
 
 def execute_rotate(form: RotateForm, dry_run: bool = False) -> None:
-    command = build_rotate_command(
-        input_file=form.input_file, output_file=form.output_file, direction=form.direction
-    )
+    command = build_rotate_command(input_file=form.input_file, output_file=form.output_file, direction=form.direction)
 
     execute_with_output(command, form.output_file, dry_run)
 
 
 def run_rotate_iteration(form: RotateForm) -> FlowResult:
     return run_generic_iteration(
-        form, collect_rotate_input, build_rotate_summary, RotateForm, edit_rotate_form, execute_rotate,
+        form,
+        collect_rotate_input,
+        build_rotate_summary,
+        RotateForm,
+        edit_rotate_form,
+        execute_rotate,
     )
 
 

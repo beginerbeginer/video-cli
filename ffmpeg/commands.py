@@ -1,5 +1,7 @@
+from contextlib import contextmanager
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from typing import Generator
 
 from domain.trim_range import TrimRange
 
@@ -208,7 +210,8 @@ def build_volume_command(
     ]
 
 
-def create_concat_list_file(input_files: list[str]) -> str:
+@contextmanager
+def create_concat_list_file(input_files: list[str]) -> Generator[str, None, None]:
     temp = NamedTemporaryFile(
         mode="w",
         encoding="utf-8",
@@ -216,13 +219,14 @@ def create_concat_list_file(input_files: list[str]) -> str:
         prefix="video_cli_concat_",
         delete=False,
     )
-
     with temp:
         for file_path in input_files:
             normalized = Path(file_path).resolve().as_posix().replace("'", r"'\''")
             temp.write(f"file '{normalized}'\n")
-
-    return temp.name
+    try:
+        yield temp.name
+    finally:
+        Path(temp.name).unlink(missing_ok=True)
 
 
 def build_concat_copy_command(concat_list_file: str, output_file: str) -> list[str]:

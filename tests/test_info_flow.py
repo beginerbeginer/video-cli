@@ -21,6 +21,7 @@ class TestCollectInfoInput(unittest.TestCase):
     @patch("usecases.info_flow.ask_text", return_value="")
     def test_empty_input_raises(self, _mock_ask, _mock_exists):
         from shared.errors import ValidationError
+
         with self.assertRaises(ValidationError):
             collect_info_input()
 
@@ -37,6 +38,7 @@ class TestRunInfoFlow(unittest.TestCase):
     @patch("usecases.info_flow.collect_info_input")
     def test_validation_error_is_caught(self, mock_collect):
         from shared.errors import ValidationError
+
         mock_collect.side_effect = ValidationError("bad")
         run_info_flow()
 

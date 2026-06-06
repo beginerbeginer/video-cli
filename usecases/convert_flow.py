@@ -55,22 +55,27 @@ def collect_convert_input(form: ConvertForm):
 
 def build_convert_summary(form: ConvertForm, media_info) -> str:
     from pathlib import Path
+
     in_ext = Path(form.input_file).suffix.upper().lstrip(".")
     out_ext = Path(form.output_file).suffix.upper().lstrip(".")
-    return "\n".join([
-        "実行内容:",
-        "- 操作: フォーマット変換（再エンコードなし）",
-        f"- 入力: {form.input_file}",
-        f"- 変換: {in_ext} → {out_ext}",
-        f"- 出力: {form.output_file}",
-    ])
+    return "\n".join(
+        [
+            "実行内容:",
+            "- 操作: フォーマット変換（再エンコードなし）",
+            f"- 入力: {form.input_file}",
+            f"- 変換: {in_ext} → {out_ext}",
+            f"- 出力: {form.output_file}",
+        ]
+    )
 
 
 def edit_convert_form(form: ConvertForm) -> ConvertForm:
-    field = ask_field_to_edit([
-        ("入力ファイル", "input_file"),
-        ("出力ファイル", "output_file"),
-    ])
+    field = ask_field_to_edit(
+        [
+            ("入力ファイル", "input_file"),
+            ("出力ファイル", "output_file"),
+        ]
+    )
     prompts = {
         "input_file": ("入力ファイルを再入力してください", "入力ファイル"),
         "output_file": ("出力ファイルを再入力してください", "出力ファイル"),
@@ -92,7 +97,12 @@ def execute_convert(form: ConvertForm, dry_run: bool = False) -> None:
 
 def run_convert_iteration(form: ConvertForm) -> FlowResult:
     return run_generic_iteration(
-        form, collect_convert_input, build_convert_summary, ConvertForm, edit_convert_form, execute_convert,
+        form,
+        collect_convert_input,
+        build_convert_summary,
+        ConvertForm,
+        edit_convert_form,
+        execute_convert,
     )
 
 

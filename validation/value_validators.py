@@ -87,9 +87,7 @@ def validate_speed_multiplier(raw: str, label: str) -> float:
 def validate_timestamp_within_duration(raw: str, duration_seconds: float) -> int:
     seconds = parse_time_input(raw)
     if seconds >= duration_seconds:
-        raise ValidationError(
-            f"指定秒数 ({seconds}秒) が動画の長さ ({duration_seconds:.0f}秒) 以上です。"
-        )
+        raise ValidationError(f"指定秒数 ({seconds}秒) が動画の長さ ({duration_seconds:.0f}秒) 以上です。")
     return seconds
 
 

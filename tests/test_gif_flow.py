@@ -98,9 +98,7 @@ class TestRunGifIteration(unittest.TestCase):
         mock_collect,
     ):
         form = GifForm()
-        updated_form = GifForm(
-            input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif"
-        )
+        updated_form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
         media_info = object()
 
         mock_collect.return_value = (updated_form, media_info)
@@ -124,9 +122,7 @@ class TestRunGifIteration(unittest.TestCase):
         mock_collect,
     ):
         form = GifForm()
-        updated_form = GifForm(
-            input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif"
-        )
+        updated_form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
         media_info = object()
 
         mock_collect.return_value = (updated_form, media_info)
@@ -150,9 +146,7 @@ class TestRunGifIteration(unittest.TestCase):
         mock_collect,
     ):
         form = GifForm()
-        updated_form = GifForm(
-            input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif"
-        )
+        updated_form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
         media_info = object()
 
         mock_collect.return_value = (updated_form, media_info)

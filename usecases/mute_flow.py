@@ -52,20 +52,24 @@ def collect_mute_input(form: MuteForm):
 
 def build_mute_summary(form: MuteForm, media_info) -> str:
     audio_info = media_info.audio.codec_name if media_info.audio else "なし"
-    return "\n".join([
-        "実行内容:",
-        "- 操作: 音声削除",
-        f"- 入力: {form.input_file}",
-        f"- 削除する音声コーデック: {audio_info}",
-        f"- 出力: {form.output_file}",
-    ])
+    return "\n".join(
+        [
+            "実行内容:",
+            "- 操作: 音声削除",
+            f"- 入力: {form.input_file}",
+            f"- 削除する音声コーデック: {audio_info}",
+            f"- 出力: {form.output_file}",
+        ]
+    )
 
 
 def edit_mute_form(form: MuteForm) -> MuteForm:
-    field = ask_field_to_edit([
-        ("入力ファイル", "input_file"),
-        ("出力ファイル", "output_file"),
-    ])
+    field = ask_field_to_edit(
+        [
+            ("入力ファイル", "input_file"),
+            ("出力ファイル", "output_file"),
+        ]
+    )
     prompts = {
         "input_file": ("入力ファイルを再入力してください", "入力ファイル"),
         "output_file": ("出力ファイルを再入力してください", "出力ファイル"),
@@ -87,7 +91,12 @@ def execute_mute(form: MuteForm, dry_run: bool = False) -> None:
 
 def run_mute_iteration(form: MuteForm) -> FlowResult:
     return run_generic_iteration(
-        form, collect_mute_input, build_mute_summary, MuteForm, edit_mute_form, execute_mute,
+        form,
+        collect_mute_input,
+        build_mute_summary,
+        MuteForm,
+        edit_mute_form,
+        execute_mute,
     )
 
 

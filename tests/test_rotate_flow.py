@@ -54,9 +54,7 @@ class TestExecuteRotate(unittest.TestCase):
         form = RotateForm(input_file="in.mp4", direction="right90", output_file="out.mp4")
         mock_build.return_value = ["ffmpeg", "..."]
         execute_rotate(form)
-        mock_build.assert_called_once_with(
-            input_file="in.mp4", output_file="out.mp4", direction="right90"
-        )
+        mock_build.assert_called_once_with(input_file="in.mp4", output_file="out.mp4", direction="right90")
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
 
     @patch("usecases.shared_flow.run_ffmpeg")
@@ -86,6 +84,7 @@ class TestRunRotateIteration(unittest.TestCase):
     @patch("usecases.rotate_flow.collect_rotate_input")
     def test_validation_error_returns_retry(self, mock_collect):
         from shared.errors import ValidationError
+
         form = RotateForm(input_file="in.mp4", direction="right90", output_file="out.mp4")
         mock_collect.side_effect = ValidationError("bad")
         result = run_rotate_iteration(form)
