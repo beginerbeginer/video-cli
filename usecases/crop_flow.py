@@ -44,7 +44,9 @@ def collect_crop_input(form: CropForm):
     print()
 
     width = _ask_int("クロップ幅を入力してください（ピクセル）\n例: 1280", form.width, validate_crop_dimension, "幅")
-    height = _ask_int("クロップ高さを入力してください（ピクセル）\n例: 720", form.height, validate_crop_dimension, "高さ")
+    height = _ask_int(
+        "クロップ高さを入力してください（ピクセル）\n例: 720", form.height, validate_crop_dimension, "高さ"
+    )
     x = _ask_int("X座標（左端からのオフセット）を入力してください\n例: 0", form.x, validate_crop_offset, "X座標")
     y = _ask_int("Y座標（上端からのオフセット）を入力してください\n例: 0", form.y, validate_crop_offset, "Y座標")
 
@@ -54,7 +56,9 @@ def collect_crop_input(form: CropForm):
     )
     validate_output_directory_exists(output_file)
 
-    return replace(form, input_file=input_file, width=width, height=height, x=x, y=y, output_file=output_file), media_info
+    return replace(
+        form, input_file=input_file, width=width, height=height, x=x, y=y, output_file=output_file
+    ), media_info
 
 
 def build_crop_summary(form: CropForm, media_info) -> str:
