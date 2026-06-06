@@ -83,7 +83,7 @@ class TestHandleResizeReview(unittest.TestCase):
 
 
 class TestExecuteResize(unittest.TestCase):
-    @patch("usecases.resize_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.resize_flow.build_resize_command")
     def test_execute_resize_runs_command(self, mock_build_resize_command, mock_run_ffmpeg):
         form = ResizeForm(
@@ -104,7 +104,7 @@ class TestExecuteResize(unittest.TestCase):
         )
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
 
-    @patch("usecases.resize_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.resize_flow.build_resize_command")
     def test_execute_resize_dry_run(self, mock_build_resize_command, mock_run_ffmpeg):
         form = ResizeForm(

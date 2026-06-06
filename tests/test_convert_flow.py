@@ -48,7 +48,7 @@ class TestHandleConvertReview(unittest.TestCase):
 
 
 class TestExecuteConvert(unittest.TestCase):
-    @patch("usecases.convert_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.convert_flow.build_convert_command")
     def test_runs_command(self, mock_build, mock_run_ffmpeg):
         form = ConvertForm(input_file="in.mov", output_file="out.mp4")
@@ -57,7 +57,7 @@ class TestExecuteConvert(unittest.TestCase):
         mock_build.assert_called_once_with(input_file="in.mov", output_file="out.mp4")
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
 
-    @patch("usecases.convert_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.convert_flow.build_convert_command")
     def test_dry_run(self, mock_build, mock_run_ffmpeg):
         form = ConvertForm(input_file="in.mov", output_file="out.mp4")

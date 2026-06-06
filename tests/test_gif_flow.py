@@ -58,7 +58,7 @@ class TestHandleGifReview(unittest.TestCase):
 
 
 class TestExecuteGif(unittest.TestCase):
-    @patch("usecases.gif_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.gif_flow.build_gif_command")
     def test_runs_command(self, mock_build, mock_run_ffmpeg):
         form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
@@ -74,7 +74,7 @@ class TestExecuteGif(unittest.TestCase):
         )
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
 
-    @patch("usecases.gif_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.gif_flow.build_gif_command")
     def test_dry_run(self, mock_build, mock_run_ffmpeg):
         form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")

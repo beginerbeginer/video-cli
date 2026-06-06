@@ -6,7 +6,6 @@ from usecases.concat_flow import (
     execute_concat,
     execute_reviewed_concat,
     handle_concat_review,
-    print_concat_execution_result,
     run_concat_iteration,
     should_return_immediately,
 )
@@ -125,22 +124,9 @@ class TestConcatFlowHelpers(unittest.TestCase):
         mock_execute_concat.assert_called_once_with(form, False, dry_run=False)
         self.assertEqual(result, FlowResult(kind="done", form=form))
 
-    @patch("builtins.print")
-    def test_print_concat_execution_result_for_executed(self, mock_print):
-        print_concat_execution_result("out.mp4", executed=True)
-
-        mock_print.assert_called_once_with("完了: out.mp4")
-
-    @patch("builtins.print")
-    def test_print_concat_execution_result_for_dry_run(self, mock_print):
-        print_concat_execution_result("out.mp4", executed=False)
-
-        mock_print.assert_called_once_with("ドライラン完了: 実行はしていません。")
-
-
 class TestExecuteConcat(unittest.TestCase):
     @patch("usecases.concat_flow.Path")
-    @patch("usecases.concat_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.concat_flow.choose_concat_strategy")
     @patch("usecases.concat_flow.create_concat_list_file")
     def test_execute_concat_uses_strategy_and_runs_ffmpeg(
@@ -179,7 +165,7 @@ class TestExecuteConcat(unittest.TestCase):
         mock_path.unlink.assert_called_once()
 
     @patch("usecases.concat_flow.Path")
-    @patch("usecases.concat_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.concat_flow.choose_concat_strategy")
     @patch("usecases.concat_flow.create_concat_list_file")
     def test_execute_concat_dry_run(
@@ -218,7 +204,7 @@ class TestExecuteConcat(unittest.TestCase):
         mock_path.unlink.assert_called_once()
 
     @patch("usecases.concat_flow.Path")
-    @patch("usecases.concat_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.concat_flow.choose_concat_strategy")
     @patch("usecases.concat_flow.create_concat_list_file")
     def test_execute_concat_removes_temp_file_even_when_ffmpeg_fails(

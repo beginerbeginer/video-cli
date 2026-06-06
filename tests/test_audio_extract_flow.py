@@ -58,7 +58,7 @@ class TestHandleAudioExtractReview(unittest.TestCase):
 
 
 class TestExecuteAudioExtract(unittest.TestCase):
-    @patch("usecases.audio_extract_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.audio_extract_flow.build_audio_extract_command")
     def test_runs_command(self, mock_build, mock_run_ffmpeg):
         form = AudioExtractForm(input_file="in.mp4", output_file="out.mp3")
@@ -69,7 +69,7 @@ class TestExecuteAudioExtract(unittest.TestCase):
         mock_build.assert_called_once_with(input_file="in.mp4", output_file="out.mp3")
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
 
-    @patch("usecases.audio_extract_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.audio_extract_flow.build_audio_extract_command")
     def test_dry_run(self, mock_build, mock_run_ffmpeg):
         form = AudioExtractForm(input_file="in.mp4", output_file="out.mp3")

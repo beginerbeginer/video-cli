@@ -58,7 +58,7 @@ class TestHandleSpeedReview(unittest.TestCase):
 
 
 class TestExecuteSpeed(unittest.TestCase):
-    @patch("usecases.speed_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.speed_flow.build_speed_command")
     def test_runs_command(self, mock_build, mock_run_ffmpeg):
         form = SpeedForm(input_file="in.mp4", speed_raw="2.0", output_file="out.mp4")
@@ -73,7 +73,7 @@ class TestExecuteSpeed(unittest.TestCase):
         )
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
 
-    @patch("usecases.speed_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.speed_flow.build_speed_command")
     def test_dry_run(self, mock_build, mock_run_ffmpeg):
         form = SpeedForm(input_file="in.mp4", speed_raw="2.0", output_file="out.mp4")

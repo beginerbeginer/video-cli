@@ -48,7 +48,7 @@ class TestHandleRotateReview(unittest.TestCase):
 
 
 class TestExecuteRotate(unittest.TestCase):
-    @patch("usecases.rotate_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.rotate_flow.build_rotate_command")
     def test_runs_command(self, mock_build, mock_run_ffmpeg):
         form = RotateForm(input_file="in.mp4", direction="right90", output_file="out.mp4")
@@ -59,7 +59,7 @@ class TestExecuteRotate(unittest.TestCase):
         )
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
 
-    @patch("usecases.rotate_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.rotate_flow.build_rotate_command")
     def test_dry_run(self, mock_build, mock_run_ffmpeg):
         form = RotateForm(input_file="in.mp4", direction="hflip", output_file="out.mp4")

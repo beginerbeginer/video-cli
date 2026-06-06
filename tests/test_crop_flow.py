@@ -48,7 +48,7 @@ class TestHandleCropReview(unittest.TestCase):
 
 
 class TestExecuteCrop(unittest.TestCase):
-    @patch("usecases.crop_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.crop_flow.build_crop_command")
     def test_runs_command(self, mock_build, mock_run_ffmpeg):
         form = CropForm(input_file="in.mp4", width=640, height=360, x=0, y=0, output_file="out.mp4")
@@ -59,7 +59,7 @@ class TestExecuteCrop(unittest.TestCase):
         )
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
 
-    @patch("usecases.crop_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.crop_flow.build_crop_command")
     def test_dry_run(self, mock_build, mock_run_ffmpeg):
         form = CropForm(input_file="in.mp4", width=640, height=360, x=0, y=0, output_file="out.mp4")

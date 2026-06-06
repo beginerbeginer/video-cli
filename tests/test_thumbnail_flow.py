@@ -58,7 +58,7 @@ class TestHandleThumbnailReview(unittest.TestCase):
 
 
 class TestExecuteThumbnail(unittest.TestCase):
-    @patch("usecases.thumbnail_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.thumbnail_flow.build_thumbnail_command")
     def test_runs_command(self, mock_build, mock_run_ffmpeg):
         form = ThumbnailForm(input_file="in.mp4", timestamp_raw="10", output_file="out.jpg")
@@ -73,7 +73,7 @@ class TestExecuteThumbnail(unittest.TestCase):
         )
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
 
-    @patch("usecases.thumbnail_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.thumbnail_flow.build_thumbnail_command")
     def test_dry_run(self, mock_build, mock_run_ffmpeg):
         form = ThumbnailForm(input_file="in.mp4", timestamp_raw="10", output_file="out.jpg")

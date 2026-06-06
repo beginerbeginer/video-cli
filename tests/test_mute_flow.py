@@ -52,7 +52,7 @@ class TestHandleMuteReview(unittest.TestCase):
 
 
 class TestExecuteMute(unittest.TestCase):
-    @patch("usecases.mute_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.mute_flow.build_mute_command")
     def test_runs_command(self, mock_build, mock_run_ffmpeg):
         form = MuteForm(input_file="in.mp4", output_file="out.mp4")
@@ -61,7 +61,7 @@ class TestExecuteMute(unittest.TestCase):
         mock_build.assert_called_once_with(input_file="in.mp4", output_file="out.mp4")
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
 
-    @patch("usecases.mute_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.mute_flow.build_mute_command")
     def test_dry_run(self, mock_build, mock_run_ffmpeg):
         form = MuteForm(input_file="in.mp4", output_file="out.mp4")
