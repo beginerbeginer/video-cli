@@ -4,125 +4,10 @@ from unittest.mock import MagicMock, patch
 from usecases.concat_flow import (
     ConcatForm,
     execute_concat,
-    execute_reviewed_concat,
-    handle_concat_review,
     run_concat_iteration,
-    should_return_immediately,
 )
 from usecases.flow_result import FlowResult
 
-
-class TestHandleConcatReview(unittest.TestCase):
-    @patch("usecases.concat_flow.ask_review_action", return_value="cancel")
-    def test_handle_concat_review_cancel(self, _mock_action):
-        form = ConcatForm()
-        result = handle_concat_review(form)
-
-        self.assertEqual(result.kind, "done")
-        self.assertEqual(result.form, form)
-
-    @patch("usecases.concat_flow.ask_review_action", return_value="restart")
-    def test_handle_concat_review_restart(self, _mock_action):
-        form = ConcatForm(
-            count_raw="3",
-            input_files=["a.mp4", "b.mp4", "c.mp4"],
-            output_file="out.mp4",
-        )
-        result = handle_concat_review(form)
-
-        self.assertEqual(result.kind, "retry")
-        self.assertEqual(result.form, ConcatForm())
-
-    @patch("usecases.concat_flow.ask_review_action", return_value="execute")
-    def test_handle_concat_review_execute(self, _mock_action):
-        form = ConcatForm(
-            count_raw="2",
-            input_files=["a.mp4", "b.mp4"],
-            output_file="out.mp4",
-        )
-        result = handle_concat_review(form)
-
-        self.assertEqual(result.kind, "execute")
-        self.assertEqual(result.form, form)
-
-    @patch("usecases.concat_flow.ask_review_action", return_value="dry_run")
-    def test_handle_concat_review_dry_run(self, _mock_action):
-        form = ConcatForm(
-            count_raw="2",
-            input_files=["a.mp4", "b.mp4"],
-            output_file="out.mp4",
-        )
-        result = handle_concat_review(form)
-
-        self.assertEqual(result.kind, "dry_run")
-        self.assertEqual(result.form, form)
-
-    @patch("usecases.concat_flow.ask_review_action", return_value="edit")
-    @patch("usecases.concat_flow.edit_concat_form")
-    def test_handle_concat_review_edit(self, mock_edit_form, _mock_action):
-        form = ConcatForm(
-            count_raw="2",
-            input_files=["a.mp4", "b.mp4"],
-            output_file="out.mp4",
-        )
-        edited = ConcatForm(
-            count_raw="2",
-            input_files=["x.mp4", "b.mp4"],
-            output_file="out.mp4",
-        )
-        mock_edit_form.return_value = edited
-
-        result = handle_concat_review(form)
-
-        self.assertEqual(result.kind, "retry")
-        self.assertEqual(result.form, edited)
-        mock_edit_form.assert_called_once_with(form)
-
-
-class TestConcatFlowHelpers(unittest.TestCase):
-    def test_should_return_immediately_for_retry(self):
-        result = FlowResult(kind="retry", form=ConcatForm())
-        self.assertTrue(should_return_immediately(result))
-
-    def test_should_return_immediately_for_done(self):
-        result = FlowResult(kind="done", form=ConcatForm())
-        self.assertTrue(should_return_immediately(result))
-
-    def test_should_not_return_immediately_for_execute(self):
-        result = FlowResult(kind="execute", form=ConcatForm())
-        self.assertFalse(should_return_immediately(result))
-
-    def test_should_not_return_immediately_for_dry_run(self):
-        result = FlowResult(kind="dry_run", form=ConcatForm())
-        self.assertFalse(should_return_immediately(result))
-
-    @patch("usecases.concat_flow.execute_concat")
-    def test_execute_reviewed_concat_runs_dry_run(self, mock_execute_concat):
-        form = ConcatForm(
-            count_raw="2",
-            input_files=["a.mp4", "b.mp4"],
-            output_file="out.mp4",
-        )
-        review_result = FlowResult(kind="dry_run", form=form)
-
-        result = execute_reviewed_concat(review_result, compatible=True)
-
-        mock_execute_concat.assert_called_once_with(form, True, dry_run=True)
-        self.assertEqual(result, FlowResult(kind="done", form=form))
-
-    @patch("usecases.concat_flow.execute_concat")
-    def test_execute_reviewed_concat_runs_execute(self, mock_execute_concat):
-        form = ConcatForm(
-            count_raw="2",
-            input_files=["a.mp4", "b.mp4"],
-            output_file="out.mp4",
-        )
-        review_result = FlowResult(kind="execute", form=form)
-
-        result = execute_reviewed_concat(review_result, compatible=False)
-
-        mock_execute_concat.assert_called_once_with(form, False, dry_run=False)
-        self.assertEqual(result, FlowResult(kind="done", form=form))
 
 class TestExecuteConcat(unittest.TestCase):
     @patch("usecases.concat_flow.Path")
@@ -243,7 +128,7 @@ class TestExecuteConcat(unittest.TestCase):
 class TestRunConcatIteration(unittest.TestCase):
     @patch("usecases.concat_flow.collect_concat_input")
     @patch("usecases.concat_flow.build_concat_summary")
-    @patch("usecases.concat_flow.handle_concat_review")
+    @patch("usecases.shared_flow.handle_generic_review")
     @patch("usecases.concat_flow.execute_concat")
     def test_run_concat_iteration_execute_path(
         self,
@@ -272,7 +157,7 @@ class TestRunConcatIteration(unittest.TestCase):
 
     @patch("usecases.concat_flow.collect_concat_input")
     @patch("usecases.concat_flow.build_concat_summary")
-    @patch("usecases.concat_flow.handle_concat_review")
+    @patch("usecases.shared_flow.handle_generic_review")
     @patch("usecases.concat_flow.execute_concat")
     def test_run_concat_iteration_dry_run_path(
         self,
@@ -301,7 +186,7 @@ class TestRunConcatIteration(unittest.TestCase):
 
     @patch("usecases.concat_flow.collect_concat_input")
     @patch("usecases.concat_flow.build_concat_summary")
-    @patch("usecases.concat_flow.handle_concat_review")
+    @patch("usecases.shared_flow.handle_generic_review")
     @patch("usecases.concat_flow.execute_concat")
     def test_run_concat_iteration_retry_path(
         self,

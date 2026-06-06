@@ -7,10 +7,9 @@ from ffmpeg.probe import probe_media_info
 from shared.errors import ValidationError
 from shared.formatters import format_media_info_summary
 from ui.prompts import ask_text, require_non_empty
-from ui.review import ask_field_to_edit, ask_review_action
-from ui.review_actions import build_review_action_handlers
-from usecases.flow_result import FLOW_RESULT_FACTORIES, FlowResult
-from usecases.shared_flow import execute_with_output
+from ui.review import ask_field_to_edit
+from usecases.flow_result import FlowResult
+from usecases.shared_flow import execute_with_output, run_flow, run_generic_iteration
 from validation.file_validators import (
     validate_input_file_exists,
     validate_output_directory_exists,
@@ -20,8 +19,6 @@ from validation.media_validators import (
     are_concat_streams_compatible,
     build_concat_compatibility_report,
 )
-
-REVIEW_ACTION_HANDLERS = build_review_action_handlers()
 
 
 @dataclass
@@ -159,18 +156,6 @@ def edit_concat_form(form: ConcatForm) -> ConcatForm:
 
 
 
-def handle_concat_review(form: ConcatForm) -> FlowResult:
-    action = ask_review_action()
-    flow_action, updated_form = REVIEW_ACTION_HANDLERS[action](
-        form,
-        {
-            "empty_form_factory": ConcatForm,
-            "edit_form": edit_concat_form,
-        },
-    )
-    return FLOW_RESULT_FACTORIES[flow_action](updated_form)
-
-
 def build_concat_command(
     form: ConcatForm,
     compatible: bool,
@@ -191,41 +176,26 @@ def execute_concat(form: ConcatForm, compatible: bool, dry_run: bool = False) ->
         path.unlink(missing_ok=True)
 
 
-def should_return_immediately(result: FlowResult) -> bool:
-    return result.kind in {"retry", "done"}
-
-
-def execute_reviewed_concat(review_result: FlowResult, compatible: bool) -> FlowResult:
-    if review_result.kind == "dry_run":
-        execute_concat(review_result.form, compatible, dry_run=True)
-        return FlowResult(kind="done", form=review_result.form)
-
-    execute_concat(review_result.form, compatible, dry_run=False)
-    return FlowResult(kind="done", form=review_result.form)
-
-
 def run_concat_iteration(form: ConcatForm) -> FlowResult:
-    try:
-        updated_form, media_infos, compatible = collect_concat_input(form)
-        summary = build_concat_summary(updated_form, media_infos, compatible)
-        print("\n" + summary + "\n")
+    compatible_ref: list = [None]
 
-        review_result = handle_concat_review(updated_form)
-        if should_return_immediately(review_result):
-            return review_result
+    def collect_with_capture(f):
+        result = collect_concat_input(f)
+        compatible_ref[0] = result[2]
+        return result
 
-        return execute_reviewed_concat(review_result, compatible)
+    def execute_fn(f, dry_run):
+        execute_concat(f, compatible_ref[0], dry_run=dry_run)
 
-    except ValidationError as exc:
-        print(f"\n入力エラー: {exc}")
-        return FlowResult(kind="retry", form=form)
+    return run_generic_iteration(
+        form,
+        collect_with_capture,
+        build_concat_summary,
+        ConcatForm,
+        edit_concat_form,
+        execute_fn,
+    )
 
 
 def run_concat_flow() -> None:
-    form = ConcatForm()
-
-    while True:
-        result = run_concat_iteration(form)
-        if result.kind == "done":
-            return
-        form = result.form
+    run_flow(ConcatForm(), run_concat_iteration)
