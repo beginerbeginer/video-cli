@@ -83,7 +83,7 @@ class TestHandleTrimReview(unittest.TestCase):
 
 
 class TestExecuteTrim(unittest.TestCase):
-    @patch("usecases.trim_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.trim_flow.build_trim_command")
     def test_execute_trim_builds_and_runs_command(self, mock_build_command, mock_run_ffmpeg):
         form = TrimForm(
@@ -103,7 +103,7 @@ class TestExecuteTrim(unittest.TestCase):
         self.assertEqual(args["trim_range"].end_seconds, 20)
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
 
-    @patch("usecases.trim_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.trim_flow.build_trim_command")
     def test_execute_trim_dry_run(self, mock_build_command, mock_run_ffmpeg):
         form = TrimForm(

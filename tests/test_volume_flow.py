@@ -78,7 +78,7 @@ class TestHandleVolumeReview(unittest.TestCase):
 
 
 class TestExecuteVolume(unittest.TestCase):
-    @patch("usecases.volume_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.volume_flow.build_volume_command")
     def test_execute_volume_runs_command(self, mock_build_volume_command, mock_run_ffmpeg):
         form = VolumeForm(
@@ -97,7 +97,7 @@ class TestExecuteVolume(unittest.TestCase):
         )
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
 
-    @patch("usecases.volume_flow.run_ffmpeg")
+    @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.volume_flow.build_volume_command")
     def test_execute_volume_dry_run(self, mock_build_volume_command, mock_run_ffmpeg):
         form = VolumeForm(

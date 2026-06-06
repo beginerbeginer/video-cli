@@ -4,14 +4,13 @@ from pathlib import Path
 from ffmpeg.commands import create_concat_list_file
 from ffmpeg.concat_strategy import choose_concat_strategy
 from ffmpeg.probe import probe_media_info
-from ffmpeg.runner import run_ffmpeg
-from shared.command_formatter import format_command
 from shared.errors import ValidationError
 from shared.formatters import format_media_info_summary
 from ui.prompts import ask_text, require_non_empty
 from ui.review import ask_field_to_edit, ask_review_action
 from ui.review_actions import build_review_action_handlers
 from usecases.flow_result import FLOW_RESULT_FACTORIES, FlowResult
+from usecases.shared_flow import execute_with_output
 from validation.file_validators import (
     validate_input_file_exists,
     validate_output_directory_exists,
@@ -179,27 +178,12 @@ def build_concat_command(
     return strategy.build(concat_list_file, form.output_file)
 
 
-def print_concat_command(command: list[str]) -> None:
-    print("生成された FFmpeg コマンド:")
-    print(format_command(command))
-    print()
-
-
-def print_concat_execution_result(output_file: str, executed: bool) -> None:
-    if executed:
-        print(f"完了: {output_file}")
-        return
-    print("ドライラン完了: 実行はしていません。")
-
-
 def execute_concat(form: ConcatForm, compatible: bool, dry_run: bool = False) -> None:
     concat_list_file = create_concat_list_file(form.input_files)
 
     try:
         command = build_concat_command(form, compatible, concat_list_file)
-        print_concat_command(command)
-        result = run_ffmpeg(command, dry_run=dry_run)
-        print_concat_execution_result(form.output_file, result.executed)
+        execute_with_output(command, form.output_file, dry_run)
     finally:
         path = Path(concat_list_file)
         path.unlink(missing_ok=True)

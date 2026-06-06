@@ -1,11 +1,26 @@
 from typing import Any, Callable
 
+from ffmpeg.runner import run_ffmpeg
+from shared.command_formatter import format_command
 from shared.errors import ValidationError
 from ui.review import ask_review_action
 from ui.review_actions import build_review_action_handlers
 from usecases.flow_result import FLOW_RESULT_FACTORIES, FlowResult
 
 _REVIEW_ACTION_HANDLERS = build_review_action_handlers()
+
+
+def execute_with_output(command: list[str], output_file: str, dry_run: bool) -> None:
+    print("生成された FFmpeg コマンド:")
+    print(format_command(command))
+    print()
+
+    result = run_ffmpeg(command, dry_run=dry_run)
+
+    if result.executed:
+        print(f"完了: {output_file}")
+    else:
+        print("ドライラン完了: 実行はしていません。")
 
 
 def handle_generic_review(
