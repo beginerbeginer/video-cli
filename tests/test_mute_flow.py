@@ -102,6 +102,7 @@ class TestRunMuteIteration(unittest.TestCase):
     @patch("usecases.mute_flow.collect_mute_input")
     def test_validation_error_returns_retry(self, mock_collect):
         from shared.errors import ValidationError
+
         form = MuteForm(input_file="in.mp4", output_file="out.mp4")
         mock_collect.side_effect = ValidationError("bad")
         result = run_mute_iteration(form)

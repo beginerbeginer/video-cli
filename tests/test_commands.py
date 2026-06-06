@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from domain.trim_range import TrimRange
 from ffmpeg.commands import (
@@ -15,6 +16,7 @@ from ffmpeg.commands import (
     build_thumbnail_command,
     build_trim_command,
     build_volume_command,
+    create_concat_list_file,
 )
 
 
@@ -346,6 +348,30 @@ class TestBuildRotateCommand(unittest.TestCase):
         command = build_rotate_command("in.mp4", "out.mp4", "vflip")
         vf_idx = command.index("-vf")
         self.assertEqual(command[vf_idx + 1], "vflip")
+
+
+class TestCreateConcatListFile(unittest.TestCase):
+    def test_yields_path_with_correct_content(self):
+        input_files = ["/tmp/a.mp4", "/tmp/b.mp4"]
+        with create_concat_list_file(input_files) as path:
+            content = Path(path).read_text()
+        self.assertIn("a.mp4", content)
+        self.assertIn("b.mp4", content)
+
+    def test_deletes_file_after_with_block(self):
+        input_files = ["/tmp/a.mp4"]
+        with create_concat_list_file(input_files) as path:
+            captured_path = path
+        self.assertFalse(Path(captured_path).exists())
+
+    def test_deletes_file_even_when_exception_raised(self):
+        input_files = ["/tmp/a.mp4"]
+        captured_path = None
+        with self.assertRaises(RuntimeError):
+            with create_concat_list_file(input_files) as path:
+                captured_path = path
+                raise RuntimeError("test error")
+        self.assertFalse(Path(captured_path).exists())
 
 
 if __name__ == "__main__":

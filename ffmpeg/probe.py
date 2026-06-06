@@ -43,9 +43,7 @@ def run_ffprobe(file_path: str) -> dict:
             check=True,
         )
     except subprocess.CalledProcessError as exc:
-        raise ValidationError(
-            f"ffprobe でメディア情報を取得できませんでした: {file_path}"
-        ) from exc
+        raise ValidationError(f"ffprobe でメディア情報を取得できませんでした: {file_path}") from exc
 
     return json.loads(result.stdout)
 

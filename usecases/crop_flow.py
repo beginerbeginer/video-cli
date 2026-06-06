@@ -62,24 +62,28 @@ def collect_crop_input(form: CropForm):
 
 
 def build_crop_summary(form: CropForm, media_info) -> str:
-    return "\n".join([
-        "実行内容:",
-        "- 操作: クロップ",
-        f"- 入力: {form.input_file}",
-        f"- クロップ範囲: {form.width}x{form.height} (x={form.x}, y={form.y})",
-        f"- 出力: {form.output_file}",
-    ])
+    return "\n".join(
+        [
+            "実行内容:",
+            "- 操作: クロップ",
+            f"- 入力: {form.input_file}",
+            f"- クロップ範囲: {form.width}x{form.height} (x={form.x}, y={form.y})",
+            f"- 出力: {form.output_file}",
+        ]
+    )
 
 
 def edit_crop_form(form: CropForm) -> CropForm:
-    field = ask_field_to_edit([
-        ("入力ファイル", "input_file"),
-        ("幅", "width"),
-        ("高さ", "height"),
-        ("X座標", "x"),
-        ("Y座標", "y"),
-        ("出力ファイル", "output_file"),
-    ])
+    field = ask_field_to_edit(
+        [
+            ("入力ファイル", "input_file"),
+            ("幅", "width"),
+            ("高さ", "height"),
+            ("X座標", "x"),
+            ("Y座標", "y"),
+            ("出力ファイル", "output_file"),
+        ]
+    )
     if field in ("width", "height"):
         raw = ask_text(f"{field} を再入力してください", default=str(getattr(form, field)))
         value = validate_crop_dimension(raw, field)
@@ -114,7 +118,12 @@ def execute_crop(form: CropForm, dry_run: bool = False) -> None:
 
 def run_crop_iteration(form: CropForm) -> FlowResult:
     return run_generic_iteration(
-        form, collect_crop_input, build_crop_summary, CropForm, edit_crop_form, execute_crop,
+        form,
+        collect_crop_input,
+        build_crop_summary,
+        CropForm,
+        edit_crop_form,
+        execute_crop,
     )
 
 

@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field, replace
-from pathlib import Path
 
 from ffmpeg.commands import create_concat_list_file
 from ffmpeg.concat_strategy import choose_concat_strategy
@@ -90,12 +89,16 @@ def collect_concat_input(form: ConcatForm):
     media_infos = [probe_media_info(path) for path in input_files]
     compatible = are_concat_streams_compatible(media_infos)
 
-    return replace(
-        form,
-        count_raw=count_raw,
-        input_files=input_files,
-        output_file=output_file,
-    ), media_infos, compatible
+    return (
+        replace(
+            form,
+            count_raw=count_raw,
+            input_files=input_files,
+            output_file=output_file,
+        ),
+        media_infos,
+        compatible,
+    )
 
 
 def format_media_info_block(media_info) -> str:
@@ -155,7 +158,6 @@ def edit_concat_form(form: ConcatForm) -> ConcatForm:
     return replace(form, input_files=update_concat_file(form.input_files, index, value))
 
 
-
 def build_concat_command(
     form: ConcatForm,
     compatible: bool,
@@ -166,14 +168,9 @@ def build_concat_command(
 
 
 def execute_concat(form: ConcatForm, compatible: bool, dry_run: bool = False) -> None:
-    concat_list_file = create_concat_list_file(form.input_files)
-
-    try:
+    with create_concat_list_file(form.input_files) as concat_list_file:
         command = build_concat_command(form, compatible, concat_list_file)
         execute_with_output(command, form.output_file, dry_run)
-    finally:
-        path = Path(concat_list_file)
-        path.unlink(missing_ok=True)
 
 
 def run_concat_iteration(form: ConcatForm) -> FlowResult:

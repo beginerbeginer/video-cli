@@ -23,44 +23,34 @@ def validate_video_file_extension(file_path: str) -> None:
     ext = Path(file_path).suffix.lower()
     if ext not in SUPPORTED_VIDEO_EXTENSIONS:
         supported = ", ".join(sorted(SUPPORTED_VIDEO_EXTENSIONS))
-        raise ValidationError(
-            f"対応していない動画拡張子です: {ext}\n対応形式: {supported}"
-        )
+        raise ValidationError(f"対応していない動画拡張子です: {ext}\n対応形式: {supported}")
 
 
 def validate_audio_output_extension(file_path: str) -> None:
     ext = Path(file_path).suffix.lower()
     if ext not in SUPPORTED_AUDIO_EXTENSIONS:
         supported = ", ".join(sorted(SUPPORTED_AUDIO_EXTENSIONS))
-        raise ValidationError(
-            f"対応していない音声拡張子です: {ext}\n対応形式: {supported}"
-        )
+        raise ValidationError(f"対応していない音声拡張子です: {ext}\n対応形式: {supported}")
 
 
 def validate_different_extension(input_file: str, output_file: str) -> None:
     in_ext = Path(input_file).suffix.lower()
     out_ext = Path(output_file).suffix.lower()
     if in_ext == out_ext:
-        raise ValidationError(
-            f"入力と出力の拡張子が同じです: {in_ext}\n変換するには異なる拡張子を指定してください。"
-        )
+        raise ValidationError(f"入力と出力の拡張子が同じです: {in_ext}\n変換するには異なる拡張子を指定してください。")
 
 
 def validate_gif_output_extension(file_path: str) -> None:
     ext = Path(file_path).suffix.lower()
     if ext not in SUPPORTED_GIF_EXTENSIONS:
-        raise ValidationError(
-            f"対応していない拡張子です: {ext}\n対応形式: .gif"
-        )
+        raise ValidationError(f"対応していない拡張子です: {ext}\n対応形式: .gif")
 
 
 def validate_image_output_extension(file_path: str) -> None:
     ext = Path(file_path).suffix.lower()
     if ext not in SUPPORTED_IMAGE_EXTENSIONS:
         supported = ", ".join(sorted(SUPPORTED_IMAGE_EXTENSIONS))
-        raise ValidationError(
-            f"対応していない画像拡張子です: {ext}\n対応形式: {supported}"
-        )
+        raise ValidationError(f"対応していない画像拡張子です: {ext}\n対応形式: {supported}")
 
 
 def validate_output_directory_exists(file_path: str) -> None:

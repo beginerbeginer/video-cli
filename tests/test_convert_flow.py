@@ -84,6 +84,7 @@ class TestRunConvertIteration(unittest.TestCase):
     @patch("usecases.convert_flow.collect_convert_input")
     def test_validation_error_returns_retry(self, mock_collect):
         from shared.errors import ValidationError
+
         form = ConvertForm(input_file="in.mov", output_file="out.mp4")
         mock_collect.side_effect = ValidationError("bad")
         result = run_convert_iteration(form)

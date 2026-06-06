@@ -10,7 +10,6 @@ from usecases.flow_result import FlowResult
 
 
 class TestExecuteConcat(unittest.TestCase):
-    @patch("usecases.concat_flow.Path")
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.concat_flow.choose_concat_strategy")
     @patch("usecases.concat_flow.create_concat_list_file")
@@ -19,7 +18,6 @@ class TestExecuteConcat(unittest.TestCase):
         mock_create_concat_list_file,
         mock_choose_concat_strategy,
         mock_run_ffmpeg,
-        mock_path_cls,
     ):
         form = ConcatForm(
             count_raw="2",
@@ -27,7 +25,8 @@ class TestExecuteConcat(unittest.TestCase):
             output_file="out.mp4",
         )
 
-        mock_create_concat_list_file.return_value = "/tmp/list.txt"
+        mock_create_concat_list_file.return_value.__enter__ = MagicMock(return_value="/tmp/list.txt")
+        mock_create_concat_list_file.return_value.__exit__ = MagicMock(return_value=False)
 
         strategy = MagicMock()
         strategy.build.return_value = ["ffmpeg", "..."]
@@ -37,19 +36,13 @@ class TestExecuteConcat(unittest.TestCase):
         mock_result.executed = True
         mock_run_ffmpeg.return_value = mock_result
 
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path_cls.return_value = mock_path
-
         execute_concat(form, compatible=True)
 
         mock_create_concat_list_file.assert_called_once_with(["a.mp4", "b.mp4"])
         mock_choose_concat_strategy.assert_called_once_with(True)
         strategy.build.assert_called_once_with("/tmp/list.txt", "out.mp4")
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
-        mock_path.unlink.assert_called_once()
 
-    @patch("usecases.concat_flow.Path")
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.concat_flow.choose_concat_strategy")
     @patch("usecases.concat_flow.create_concat_list_file")
@@ -58,7 +51,6 @@ class TestExecuteConcat(unittest.TestCase):
         mock_create_concat_list_file,
         mock_choose_concat_strategy,
         mock_run_ffmpeg,
-        mock_path_cls,
     ):
         form = ConcatForm(
             count_raw="2",
@@ -66,7 +58,8 @@ class TestExecuteConcat(unittest.TestCase):
             output_file="out.mp4",
         )
 
-        mock_create_concat_list_file.return_value = "/tmp/list.txt"
+        mock_create_concat_list_file.return_value.__enter__ = MagicMock(return_value="/tmp/list.txt")
+        mock_create_concat_list_file.return_value.__exit__ = MagicMock(return_value=False)
 
         strategy = MagicMock()
         strategy.build.return_value = ["ffmpeg", "..."]
@@ -76,19 +69,13 @@ class TestExecuteConcat(unittest.TestCase):
         mock_result.executed = False
         mock_run_ffmpeg.return_value = mock_result
 
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path_cls.return_value = mock_path
-
         execute_concat(form, compatible=True, dry_run=True)
 
         mock_create_concat_list_file.assert_called_once_with(["a.mp4", "b.mp4"])
         mock_choose_concat_strategy.assert_called_once_with(True)
         strategy.build.assert_called_once_with("/tmp/list.txt", "out.mp4")
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
-        mock_path.unlink.assert_called_once()
 
-    @patch("usecases.concat_flow.Path")
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.concat_flow.choose_concat_strategy")
     @patch("usecases.concat_flow.create_concat_list_file")
@@ -97,7 +84,6 @@ class TestExecuteConcat(unittest.TestCase):
         mock_create_concat_list_file,
         mock_choose_concat_strategy,
         mock_run_ffmpeg,
-        mock_path_cls,
     ):
         from shared.errors import FfmpegExecutionError
 
@@ -107,7 +93,8 @@ class TestExecuteConcat(unittest.TestCase):
             output_file="out.mp4",
         )
 
-        mock_create_concat_list_file.return_value = "/tmp/list.txt"
+        mock_create_concat_list_file.return_value.__enter__ = MagicMock(return_value="/tmp/list.txt")
+        mock_create_concat_list_file.return_value.__exit__ = MagicMock(return_value=False)
 
         strategy = MagicMock()
         strategy.build.return_value = ["ffmpeg", "..."]
@@ -115,14 +102,10 @@ class TestExecuteConcat(unittest.TestCase):
 
         mock_run_ffmpeg.side_effect = FfmpegExecutionError("failed")
 
-        mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_path_cls.return_value = mock_path
-
         with self.assertRaises(FfmpegExecutionError):
             execute_concat(form, compatible=False)
 
-        mock_path.unlink.assert_called_once()
+        mock_create_concat_list_file.return_value.__exit__.assert_called_once()
 
 
 class TestRunConcatIteration(unittest.TestCase):

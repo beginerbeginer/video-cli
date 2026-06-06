@@ -8,8 +8,7 @@ from ffmpeg.commands import (
 
 
 class ConcatCommandStrategy(Protocol):
-    def build(self, concat_list_file: str, output_file: str) -> list[str]:
-        ...
+    def build(self, concat_list_file: str, output_file: str) -> list[str]: ...
 
 
 @dataclass(frozen=True)

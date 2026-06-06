@@ -97,9 +97,7 @@ class TestRunThumbnailIteration(unittest.TestCase):
         mock_collect,
     ):
         form = ThumbnailForm()
-        updated_form = ThumbnailForm(
-            input_file="in.mp4", timestamp_raw="10", output_file="out.jpg"
-        )
+        updated_form = ThumbnailForm(input_file="in.mp4", timestamp_raw="10", output_file="out.jpg")
         media_info = object()
 
         mock_collect.return_value = (updated_form, media_info)
@@ -123,9 +121,7 @@ class TestRunThumbnailIteration(unittest.TestCase):
         mock_collect,
     ):
         form = ThumbnailForm()
-        updated_form = ThumbnailForm(
-            input_file="in.mp4", timestamp_raw="10", output_file="out.jpg"
-        )
+        updated_form = ThumbnailForm(input_file="in.mp4", timestamp_raw="10", output_file="out.jpg")
         media_info = object()
 
         mock_collect.return_value = (updated_form, media_info)
@@ -149,9 +145,7 @@ class TestRunThumbnailIteration(unittest.TestCase):
         mock_collect,
     ):
         form = ThumbnailForm()
-        updated_form = ThumbnailForm(
-            input_file="in.mp4", timestamp_raw="10", output_file="out.jpg"
-        )
+        updated_form = ThumbnailForm(input_file="in.mp4", timestamp_raw="10", output_file="out.jpg")
         media_info = object()
 
         mock_collect.return_value = (updated_form, media_info)
