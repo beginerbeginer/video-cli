@@ -9,7 +9,7 @@ def parse_fps(rate: str | None) -> float | None:
 
     try:
         return float(Fraction(rate))
-    except Exception:
+    except (ValueError, ZeroDivisionError):
         return None
 
 
