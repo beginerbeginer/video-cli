@@ -16,6 +16,7 @@ from validation.file_validators import (
 from validation.media_validators import validate_trim_end_within_duration
 from validation.value_validators import parse_time_input
 
+
 @dataclass
 class TrimForm:
     input_file: str = "./input.mp4"

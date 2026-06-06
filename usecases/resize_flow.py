@@ -14,6 +14,7 @@ from validation.file_validators import (
 )
 from validation.value_validators import validate_dimension
 
+
 @dataclass
 class ResizeForm:
     input_file: str = "./input.mp4"

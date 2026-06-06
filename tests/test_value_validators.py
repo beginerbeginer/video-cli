@@ -1,7 +1,17 @@
 import unittest
 
 from shared.errors import ValidationError
-from validation.value_validators import parse_time_input, validate_crop_dimension, validate_crop_offset, validate_dimension, validate_fps, validate_gif_width, validate_speed_multiplier, validate_timestamp_within_duration, validate_volume_level
+from validation.value_validators import (
+    parse_time_input,
+    validate_crop_dimension,
+    validate_crop_offset,
+    validate_dimension,
+    validate_fps,
+    validate_gif_width,
+    validate_speed_multiplier,
+    validate_timestamp_within_duration,
+    validate_volume_level,
+)
 
 
 class TestParseTimeInput(unittest.TestCase):
