@@ -373,6 +373,41 @@ class TestCreateConcatListFile(unittest.TestCase):
                 raise RuntimeError("test error")
         self.assertFalse(Path(captured_path).exists())
 
+    def test_deletes_file_when_write_raises(self):
+        import tempfile
+        from unittest.mock import MagicMock, patch
+
+        real_tmp = tempfile.NamedTemporaryFile(delete=False)
+        real_tmp.close()
+        real_tmp_name = real_tmp.name
+        self.addCleanup(Path(real_tmp_name).unlink, missing_ok=True)
+
+        mock_file = MagicMock()
+        mock_file.__enter__ = MagicMock(return_value=mock_file)
+        mock_file.__exit__ = MagicMock(return_value=False)
+        mock_file.write.side_effect = OSError("disk full")
+        mock_file.name = real_tmp_name
+
+        with self.assertRaises(OSError):
+            with patch("ffmpeg.commands.NamedTemporaryFile", return_value=mock_file):
+                with create_concat_list_file(["/tmp/a.mp4"]):
+                    pass
+
+        self.assertFalse(Path(real_tmp_name).exists())
+
+    def test_each_line_has_ffmpeg_file_entry_format(self):
+        with create_concat_list_file(["/tmp/a.mp4", "/tmp/b.mp4"]) as path:
+            content = Path(path).read_text()
+        lines = content.strip().split("\n")
+        self.assertEqual(len(lines), 2)
+        for line in lines:
+            self.assertRegex(line, r"^file '.*'$")
+
+    def test_single_quote_in_path_is_escaped(self):
+        with create_concat_list_file(["/tmp/it's.mp4"]) as path:
+            content = Path(path).read_text()
+        self.assertIn(r"'\''" , content)
+
 
 if __name__ == "__main__":
     unittest.main()
