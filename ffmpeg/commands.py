@@ -192,6 +192,26 @@ def build_audio_extract_command(
     ]
 
 
+def build_compress_command(
+    input_file: str,
+    output_file: str,
+    crf: int = 23,
+) -> list[str]:
+    return [
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_file,
+        "-c:v",
+        "libx264",
+        "-crf",
+        str(crf),
+        "-c:a",
+        "copy",
+        output_file,
+    ]
+
+
 def build_volume_command(
     input_file: str,
     output_file: str,

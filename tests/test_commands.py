@@ -4,6 +4,7 @@ from pathlib import Path
 from domain.trim_range import TrimRange
 from ffmpeg.commands import (
     build_audio_extract_command,
+    build_compress_command,
     build_concat_copy_command,
     build_concat_reencode_command,
     build_convert_command,
@@ -407,6 +408,36 @@ class TestCreateConcatListFile(unittest.TestCase):
         with create_concat_list_file(["/tmp/it's.mp4"]) as path:
             content = Path(path).read_text()
         self.assertIn(r"'\''" , content)
+
+
+class TestBuildCompressCommand(unittest.TestCase):
+    def test_command_starts_with_ffmpeg(self):
+        command = build_compress_command("in.mp4", "out.mp4", crf=23)
+        self.assertEqual(command[0], "ffmpeg")
+
+    def test_uses_libx264_codec(self):
+        command = build_compress_command("in.mp4", "out.mp4", crf=23)
+        self.assertIn("libx264", command)
+
+    def test_default_crf_is_23(self):
+        command = build_compress_command("in.mp4", "out.mp4")
+        crf_idx = command.index("-crf")
+        self.assertEqual(command[crf_idx + 1], "23")
+
+    def test_custom_crf_value(self):
+        command = build_compress_command("in.mp4", "out.mp4", crf=18)
+        crf_idx = command.index("-crf")
+        self.assertEqual(command[crf_idx + 1], "18")
+
+    def test_audio_is_copied(self):
+        command = build_compress_command("in.mp4", "out.mp4", crf=23)
+        ca_idx = command.index("-c:a")
+        self.assertEqual(command[ca_idx + 1], "copy")
+
+    def test_includes_input_and_output_files(self):
+        command = build_compress_command("in.mp4", "out.mp4", crf=23)
+        self.assertIn("in.mp4", command)
+        self.assertIn("out.mp4", command)
 
 
 if __name__ == "__main__":
