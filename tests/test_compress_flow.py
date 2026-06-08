@@ -15,6 +15,7 @@ class TestExecuteCompress(unittest.TestCase):
     def test_execute_compress_runs_command(self, mock_build, mock_run_ffmpeg):
         form = CompressForm(input_file="in.mp4", crf_raw="23", output_file="out.mp4")
         mock_build.return_value = ["ffmpeg", "..."]
+        mock_run_ffmpeg.return_value.executed = True
 
         execute_compress(form)
 
@@ -30,6 +31,7 @@ class TestExecuteCompress(unittest.TestCase):
     def test_execute_compress_dry_run(self, mock_build, mock_run_ffmpeg):
         form = CompressForm(input_file="in.mp4", crf_raw="23", output_file="out.mp4")
         mock_build.return_value = ["ffmpeg", "..."]
+        mock_run_ffmpeg.return_value.executed = False
 
         execute_compress(form, dry_run=True)
 
