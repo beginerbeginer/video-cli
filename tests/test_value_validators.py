@@ -3,6 +3,7 @@ import unittest
 from shared.errors import ValidationError
 from validation.value_validators import (
     parse_time_input,
+    validate_crf,
     validate_crop_dimension,
     validate_crop_offset,
     validate_dimension,
@@ -220,6 +221,25 @@ class TestValidateCropOffset(unittest.TestCase):
     def test_non_integer(self):
         with self.assertRaises(ValidationError):
             validate_crop_offset("abc", "X座標")
+
+
+class TestValidateCrf(unittest.TestCase):
+    def test_valid_range(self):
+        self.assertEqual(validate_crf("0", "CRF"), 0)
+        self.assertEqual(validate_crf("23", "CRF"), 23)
+        self.assertEqual(validate_crf("51", "CRF"), 51)
+
+    def test_too_small(self):
+        with self.assertRaises(ValidationError):
+            validate_crf("-1", "CRF")
+
+    def test_too_large(self):
+        with self.assertRaises(ValidationError):
+            validate_crf("52", "CRF")
+
+    def test_non_integer(self):
+        with self.assertRaises(ValidationError):
+            validate_crf("abc", "CRF")
 
 
 if __name__ == "__main__":

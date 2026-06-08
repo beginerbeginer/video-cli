@@ -5,6 +5,7 @@ from pathlib import Path
 from shared.errors import ValidationError
 from validation.file_validators import (
     validate_audio_output_extension,
+    validate_compress_output_extension,
     validate_different_extension,
     validate_gif_output_extension,
     validate_image_output_extension,
@@ -105,6 +106,25 @@ class TestValidateDifferentExtension(unittest.TestCase):
     def test_case_insensitive(self):
         with self.assertRaises(ValidationError):
             validate_different_extension("input.MP4", "output.mp4")
+
+
+class TestValidateCompressOutputExtension(unittest.TestCase):
+    def test_mp4_passes(self):
+        validate_compress_output_extension("out.mp4")
+
+    def test_mov_passes(self):
+        validate_compress_output_extension("out.mov")
+
+    def test_mkv_passes(self):
+        validate_compress_output_extension("out.mkv")
+
+    def test_webm_raises(self):
+        with self.assertRaises(ValidationError):
+            validate_compress_output_extension("out.webm")
+
+    def test_unsupported_raises(self):
+        with self.assertRaises(ValidationError):
+            validate_compress_output_extension("out.avi")
 
 
 if __name__ == "__main__":

@@ -207,7 +207,7 @@ def build_compress_command(
         "-crf",
         str(crf),
         "-c:a",
-        "copy",
+        "aac",
         output_file,
     ]
 

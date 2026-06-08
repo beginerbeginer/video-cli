@@ -429,10 +429,10 @@ class TestBuildCompressCommand(unittest.TestCase):
         crf_idx = command.index("-crf")
         self.assertEqual(command[crf_idx + 1], "18")
 
-    def test_audio_is_copied(self):
+    def test_audio_is_transcoded_to_aac(self):
         command = build_compress_command("in.mp4", "out.mp4", crf=23)
         ca_idx = command.index("-c:a")
-        self.assertEqual(command[ca_idx + 1], "copy")
+        self.assertEqual(command[ca_idx + 1], "aac")
 
     def test_includes_input_and_output_files(self):
         command = build_compress_command("in.mp4", "out.mp4", crf=23)

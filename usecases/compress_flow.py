@@ -2,29 +2,18 @@ from dataclasses import dataclass, replace
 
 from ffmpeg.commands import build_compress_command
 from ffmpeg.probe import probe_media_info
-from shared.errors import ValidationError
 from shared.formatters import format_media_info_summary
 from ui.prompts import ask_text, require_non_empty
 from ui.review import ask_field_to_edit
 from usecases.flow_result import FlowResult
 from usecases.shared_flow import execute_with_output, handle_generic_review, run_flow, run_generic_iteration
 from validation.file_validators import (
+    validate_compress_output_extension,
     validate_input_file_exists,
     validate_output_directory_exists,
     validate_video_file_extension,
 )
-
-
-def validate_crf(raw: str, label: str) -> int:
-    try:
-        value = int(raw)
-    except ValueError as exc:
-        raise ValidationError(f"{label} は整数で入力してください。") from exc
-
-    if value < 0 or value > 51:
-        raise ValidationError(f"{label} は 0〜51 の範囲で入力してください。")
-
-    return value
+from validation.value_validators import validate_crf
 
 
 @dataclass
@@ -79,6 +68,7 @@ def collect_compress_input(form: CompressForm):
 
     output_file = ask_compress_output(form.output_file)
     validate_output_directory_exists(output_file)
+    validate_compress_output_extension(output_file)
 
     return replace(
         form,
