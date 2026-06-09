@@ -5,6 +5,7 @@ from ffmpeg.probe import ensure_ffmpeg_installed, ensure_ffprobe_installed
 from shared.errors import FfmpegExecutionError, ValidationError
 from ui.main_menu import prompt_main_menu
 from usecases.audio_extract_flow import run_audio_extract_flow
+from usecases.compress_flow import run_compress_flow
 from usecases.concat_flow import run_concat_flow
 from usecases.convert_flow import run_convert_flow
 from usecases.crop_flow import run_crop_flow
@@ -44,6 +45,7 @@ def build_operation_handlers() -> dict[str, OperationHandler]:
         operations.ROTATE: run_rotate_flow,
         operations.INFO: run_info_flow,
         operations.CROP: run_crop_flow,
+        operations.COMPRESS: run_compress_flow,
         operations.EXIT: exit_program,
     }
 

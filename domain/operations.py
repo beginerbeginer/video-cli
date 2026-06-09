@@ -1,3 +1,4 @@
+COMPRESS = "compress"
 TRIM = "trim"
 CONCAT = "concat"
 RESIZE = "resize"

@@ -192,6 +192,29 @@ def build_audio_extract_command(
     ]
 
 
+def build_compress_command(
+    input_file: str,
+    output_file: str,
+    crf: int = 23,
+) -> list[str]:
+    # -c:a copy ではなく aac を使う。
+    # copy だと WebM(Opus) 入力を MP4 に格納したとき QuickTime・iOS 等が音声を再生できない。
+    # AAC に変換することで主要プレイヤーとの互換性を保証する。
+    return [
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_file,
+        "-c:v",
+        "libx264",
+        "-crf",
+        str(crf),
+        "-c:a",
+        "aac",
+        output_file,
+    ]
+
+
 def build_volume_command(
     input_file: str,
     output_file: str,

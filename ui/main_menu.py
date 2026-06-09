@@ -19,6 +19,7 @@ def prompt_main_menu() -> str:
             ("回転・反転する", operations.ROTATE),
             ("動画情報を確認する", operations.INFO),
             ("動画をクロップする", operations.CROP),
+            ("動画を圧縮する", operations.COMPRESS),
             ("終了する", operations.EXIT),
         ],
     )
