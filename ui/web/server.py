@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import json
 import subprocess
 from pathlib import Path
@@ -65,8 +64,6 @@ def preview():
     params = data.get("params", {})
     try:
         if operation == "concat":
-            raw_files = params.get("input_files", "a.mp4, b.mp4")
-            files = [f.strip() for f in raw_files.split(",") if f.strip()]
             cmd = build_concat_copy_command("/tmp/concat_list.txt", params.get("output_file", "out.mp4"))
             cmd[cmd.index("/tmp/concat_list.txt")] = "<concat_list>"
             return jsonify({"ok": True, "command": " ".join(cmd)})

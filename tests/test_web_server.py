@@ -1,16 +1,15 @@
 import json
 import unittest
 
-from ui.web.server import _build_command, app
+from domain.trim_range import TrimRange
 from ffmpeg.commands import (
     build_compress_command,
     build_fps_command,
     build_resize_command,
+    build_trim_command,
     build_volume_command,
 )
-from domain.trim_range import TrimRange
-from ffmpeg.commands import build_trim_command
-from shared.errors import ValidationError
+from ui.web.server import _build_command, app
 
 
 class TestPreviewEndpoint(unittest.TestCase):
@@ -72,12 +71,14 @@ class TestBuildCommand(unittest.TestCase):
         self.assertEqual(cmd, expected)
 
     def test_resize(self):
-        cmd = _build_command("resize", {"input_file": "in.mp4", "width": "1280", "height": "720", "output_file": "out.mp4"})
+        params = {"input_file": "in.mp4", "width": "1280", "height": "720", "output_file": "out.mp4"}
+        cmd = _build_command("resize", params)
         expected = build_resize_command("in.mp4", "out.mp4", 1280, 720)
         self.assertEqual(cmd, expected)
 
     def test_trim(self):
-        cmd = _build_command("trim", {"input_file": "in.mp4", "start_time": "10", "end_time": "30", "output_file": "out.mp4"})
+        params = {"input_file": "in.mp4", "start_time": "10", "end_time": "30", "output_file": "out.mp4"}
+        cmd = _build_command("trim", params)
         expected = build_trim_command("in.mp4", "out.mp4", TrimRange.create(10, 30))
         self.assertEqual(cmd, expected)
 
