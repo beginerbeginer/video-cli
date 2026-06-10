@@ -1,7 +1,14 @@
+import math
 import re
 
 from domain.trim_range import TrimRange
 from shared.errors import ValidationError
+
+
+def require_non_empty(value: str, field_name: str) -> str:
+    if value.strip() == "":
+        raise ValidationError(f"{field_name}は空にできません。")
+    return value
 
 
 def parse_hhmmss_groups(groups: tuple[str, str, str]) -> tuple[int, int, int]:
@@ -78,7 +85,7 @@ def validate_speed_multiplier(raw: str, label: str) -> float:
     except ValueError as exc:
         raise ValidationError(f"{label} は数値で入力してください。") from exc
 
-    if value < 0.25 or value > 4.0:
+    if not math.isfinite(value) or value < 0.25 or value > 4.0:
         raise ValidationError(f"{label} は 0.25〜4.0 の範囲で入力してください。")
 
     return value
@@ -90,7 +97,7 @@ def validate_fps_rate(raw: str, label: str) -> float:
     except ValueError as exc:
         raise ValidationError(f"{label} は数値で入力してください。") from exc
 
-    if value < 1 or value > 120:
+    if not math.isfinite(value) or value < 1 or value > 120:
         raise ValidationError(f"{label} は 1〜120 の範囲で入力してください。")
 
     return value

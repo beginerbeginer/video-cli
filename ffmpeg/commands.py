@@ -220,9 +220,9 @@ def build_fps_command(
     output_file: str,
     fps: float,
 ) -> list[str]:
-    # -c:a aac ではなく copy を使う。
-    # fps 変換は映像フィルタのみ適用し、音声を変更する理由がない。
-    # copy にすることで音質劣化なし・エンコード時間の短縮・コーデック互換性の維持ができる。
+    # copy を基本とするが WebM は AAC 非対応のため libopus を使う。
+    # WebM の仕様上、音声は Vorbis/Opus のみ許容される。copy では muxer エラーになる。
+    audio_codec = "libopus" if output_file.lower().endswith(".webm") else "copy"
     fps_str = f"{fps:g}"
     return [
         "ffmpeg",
@@ -232,7 +232,7 @@ def build_fps_command(
         "-vf",
         f"fps={fps_str}",
         "-c:a",
-        "copy",
+        audio_codec,
         output_file,
     ]
 

@@ -131,6 +131,10 @@ class TestValidateSpeedMultiplier(unittest.TestCase):
     def test_one_is_valid(self):
         self.assertAlmostEqual(validate_speed_multiplier("1.0", "速度"), 1.0)
 
+    def test_nan_raises_error(self):
+        with self.assertRaises(ValidationError):
+            validate_speed_multiplier("nan", "速度")
+
 
 class TestValidateTimestampWithinDuration(unittest.TestCase):
     def test_valid_seconds(self):
@@ -179,6 +183,10 @@ class TestValidateVolumeLevel(unittest.TestCase):
     def test_too_large(self):
         with self.assertRaises(ValidationError):
             validate_volume_level("10.1", "音量")
+
+    def test_nan_raises_error(self):
+        with self.assertRaises(ValidationError):
+            validate_volume_level("nan", "音量")
 
 
 class TestValidateCropDimension(unittest.TestCase):
@@ -267,6 +275,14 @@ class TestValidateFpsRate(unittest.TestCase):
     def test_non_numeric(self):
         with self.assertRaises(ValidationError):
             validate_fps_rate("abc", "fps")
+
+    def test_nan_raises_error(self):
+        with self.assertRaises(ValidationError):
+            validate_fps_rate("nan", "fps")
+
+    def test_inf_raises_error(self):
+        with self.assertRaises(ValidationError):
+            validate_fps_rate("inf", "fps")
 
 
 if __name__ == "__main__":
