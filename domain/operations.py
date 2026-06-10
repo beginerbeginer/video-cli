@@ -1,4 +1,5 @@
 COMPRESS = "compress"
+FPS = "fps"
 TRIM = "trim"
 CONCAT = "concat"
 RESIZE = "resize"

@@ -84,6 +84,18 @@ def validate_speed_multiplier(raw: str, label: str) -> float:
     return value
 
 
+def validate_fps_rate(raw: str, label: str) -> float:
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise ValidationError(f"{label} は数値で入力してください。") from exc
+
+    if value < 1 or value > 120:
+        raise ValidationError(f"{label} は 1〜120 の範囲で入力してください。")
+
+    return value
+
+
 def validate_crf(raw: str, label: str) -> int:
     try:
         value = int(raw)

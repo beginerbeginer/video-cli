@@ -215,6 +215,28 @@ def build_compress_command(
     ]
 
 
+def build_fps_command(
+    input_file: str,
+    output_file: str,
+    fps: float,
+) -> list[str]:
+    # -c:a aac ではなく copy を使う。
+    # fps 変換は映像フィルタのみ適用し、音声を変更する理由がない。
+    # copy にすることで音質劣化なし・エンコード時間の短縮・コーデック互換性の維持ができる。
+    fps_str = f"{fps:g}"
+    return [
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_file,
+        "-vf",
+        f"fps={fps_str}",
+        "-c:a",
+        "copy",
+        output_file,
+    ]
+
+
 def build_volume_command(
     input_file: str,
     output_file: str,

@@ -20,6 +20,7 @@ def prompt_main_menu() -> str:
             ("動画情報を確認する", operations.INFO),
             ("動画をクロップする", operations.CROP),
             ("動画を圧縮する", operations.COMPRESS),
+            ("フレームレートを変換する", operations.FPS),
             ("終了する", operations.EXIT),
         ],
     )
