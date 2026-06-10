@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 
 from usecases.crop_flow import (
     CropForm,
+    edit_crop_form,
     execute_crop,
     handle_crop_review,
     run_crop_iteration,
@@ -98,6 +99,34 @@ class TestRunCropIteration(unittest.TestCase):
         result = run_crop_iteration(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, form)
+
+
+class TestEditCropForm(unittest.TestCase):
+    def _make_ui(self, field_choice, text_return="100"):
+        ui = Mock()
+        ui.ask_menu.return_value = field_choice
+        ui.ask_text.return_value = text_return
+        return ui
+
+    def test_width_prompt_uses_japanese_label(self):
+        ui = self._make_ui("width")
+        edit_crop_form(CropForm(width=640), ui)
+        ui.ask_text.assert_called_once_with("幅 を再入力してください", default="640")
+
+    def test_height_prompt_uses_japanese_label(self):
+        ui = self._make_ui("height")
+        edit_crop_form(CropForm(height=360), ui)
+        ui.ask_text.assert_called_once_with("高さ を再入力してください", default="360")
+
+    def test_x_prompt_uses_japanese_label(self):
+        ui = self._make_ui("x")
+        edit_crop_form(CropForm(x=0), ui)
+        ui.ask_text.assert_called_once_with("X座標 を再入力してください", default="0")
+
+    def test_y_prompt_uses_japanese_label(self):
+        ui = self._make_ui("y")
+        edit_crop_form(CropForm(y=0), ui)
+        ui.ask_text.assert_called_once_with("Y座標 を再入力してください", default="0")
 
 
 if __name__ == "__main__":

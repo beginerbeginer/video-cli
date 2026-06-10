@@ -52,7 +52,7 @@ class TestBuildOperationHandlers(unittest.TestCase):
                 return choices[0][1] if choices else ""
 
         stub = StubUI()
-        # CliUI 固有の型しか受け入れない実装だと、ここで TypeError が上がる
+        # CliUI 固有の型しか受け入れない実装だと、静的型チェッカーがここでエラーを報告する
         handlers = build_operation_handlers(stub)
         self.assertIn("trim", handlers)
         self.assertIn("fps", handlers)

@@ -13,6 +13,15 @@ from validation.file_validators import (
 )
 from validation.value_validators import require_non_empty, validate_crop_dimension, validate_crop_offset
 
+_FIELD_LABELS: dict[str, str] = {
+    "width": "幅",
+    "height": "高さ",
+    "x": "X座標",
+    "y": "Y座標",
+    "input_file": "入力ファイル",
+    "output_file": "出力ファイル",
+}
+
 
 @dataclass
 class CropForm:
@@ -86,17 +95,17 @@ def edit_crop_form(form: CropForm, ui: UIPort) -> CropForm:
             ("出力ファイル", "output_file"),
         ],
     )
+    label = _FIELD_LABELS[field]
     if field in ("width", "height"):
-        raw = ui.ask_text(f"{field} を再入力してください", default=str(getattr(form, field)))
-        value = validate_crop_dimension(raw, field)
+        raw = ui.ask_text(f"{label} を再入力してください", default=str(getattr(form, field)))
+        value = validate_crop_dimension(raw, label)
     elif field in ("x", "y"):
-        raw = ui.ask_text(f"{field} を再入力してください", default=str(getattr(form, field)))
-        value = validate_crop_offset(raw, field)
+        raw = ui.ask_text(f"{label} を再入力してください", default=str(getattr(form, field)))
+        value = validate_crop_offset(raw, label)
     else:
-        labels = {"input_file": "入力ファイル", "output_file": "出力ファイル"}
         value = require_non_empty(
-            ui.ask_text(f"{labels[field]} を再入力してください", default=getattr(form, field)),
-            labels[field],
+            ui.ask_text(f"{label} を再入力してください", default=getattr(form, field)),
+            label,
         )
     return replace(form, **{field: value})
 
