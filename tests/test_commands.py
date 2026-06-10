@@ -454,6 +454,16 @@ class TestBuildFpsCommand(unittest.TestCase):
         vf_idx = command.index("-vf")
         self.assertEqual(command[vf_idx + 1], "fps=23.976")
 
+    def test_webm_output_uses_libopus(self):
+        command = build_fps_command("in.mp4", "out.webm", fps=30.0)
+        ca_idx = command.index("-c:a")
+        self.assertEqual(command[ca_idx + 1], "libopus")
+
+    def test_mp4_output_uses_copy(self):
+        command = build_fps_command("in.mp4", "out.mp4", fps=30.0)
+        ca_idx = command.index("-c:a")
+        self.assertEqual(command[ca_idx + 1], "copy")
+
 
 if __name__ == "__main__":
     unittest.main()
