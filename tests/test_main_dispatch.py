@@ -3,7 +3,6 @@ from collections.abc import Sequence
 from unittest.mock import Mock
 
 from main import build_operation_handlers, dispatch_operation
-from usecases.ui_port import UIPort
 
 
 class TestDispatchOperation(unittest.TestCase):
