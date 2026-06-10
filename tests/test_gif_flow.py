@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from usecases.flow_result import FlowResult
 from usecases.gif_flow import (
@@ -11,50 +11,49 @@ from usecases.gif_flow import (
 
 
 class TestHandleGifReview(unittest.TestCase):
-    @patch("usecases.shared_flow.ask_review_action", return_value="cancel")
-    def test_cancel(self, _mock_action):
+    def test_cancel(self):
         form = GifForm()
-        result = handle_gif_review(form)
-
+        ui = Mock()
+        ui.ask_menu.return_value = "cancel"
+        result = handle_gif_review(form, ui)
         self.assertEqual(result.kind, "done")
         self.assertEqual(result.form, form)
 
-    @patch("usecases.shared_flow.ask_review_action", return_value="restart")
-    def test_restart(self, _mock_action):
+    def test_restart(self):
         form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
-        result = handle_gif_review(form)
-
+        ui = Mock()
+        ui.ask_menu.return_value = "restart"
+        result = handle_gif_review(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, GifForm())
 
-    @patch("usecases.shared_flow.ask_review_action", return_value="execute")
-    def test_execute(self, _mock_action):
+    def test_execute(self):
         form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
-        result = handle_gif_review(form)
-
+        ui = Mock()
+        ui.ask_menu.return_value = "execute"
+        result = handle_gif_review(form, ui)
         self.assertEqual(result.kind, "execute")
         self.assertEqual(result.form, form)
 
-    @patch("usecases.shared_flow.ask_review_action", return_value="dry_run")
-    def test_dry_run(self, _mock_action):
+    def test_dry_run(self):
         form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
-        result = handle_gif_review(form)
-
+        ui = Mock()
+        ui.ask_menu.return_value = "dry_run"
+        result = handle_gif_review(form, ui)
         self.assertEqual(result.kind, "dry_run")
         self.assertEqual(result.form, form)
 
-    @patch("usecases.shared_flow.ask_review_action", return_value="edit")
     @patch("usecases.gif_flow.edit_gif_form")
-    def test_edit(self, mock_edit_form, _mock_action):
+    def test_edit(self, mock_edit_form):
         form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
         edited = GifForm(input_file="in.mp4", fps_raw="15", width_raw="480", output_file="out.gif")
         mock_edit_form.return_value = edited
-
-        result = handle_gif_review(form)
-
+        ui = Mock()
+        ui.ask_menu.return_value = "edit"
+        result = handle_gif_review(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, edited)
-        mock_edit_form.assert_called_once_with(form)
+        mock_edit_form.assert_called_once_with(form, ui)
 
 
 class TestExecuteGif(unittest.TestCase):
@@ -63,15 +62,8 @@ class TestExecuteGif(unittest.TestCase):
     def test_runs_command(self, mock_build, mock_run_ffmpeg):
         form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
         mock_build.return_value = ["ffmpeg", "..."]
-
         execute_gif(form)
-
-        mock_build.assert_called_once_with(
-            input_file="in.mp4",
-            output_file="out.gif",
-            fps=10,
-            width=480,
-        )
+        mock_build.assert_called_once_with(input_file="in.mp4", output_file="out.gif", fps=10, width=480)
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
 
     @patch("usecases.shared_flow.run_ffmpeg")
@@ -79,9 +71,7 @@ class TestExecuteGif(unittest.TestCase):
     def test_dry_run(self, mock_build, mock_run_ffmpeg):
         form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
         mock_build.return_value = ["ffmpeg", "..."]
-
         execute_gif(form, dry_run=True)
-
         mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
 
 
@@ -90,23 +80,15 @@ class TestRunGifIteration(unittest.TestCase):
     @patch("usecases.gif_flow.build_gif_summary")
     @patch("usecases.shared_flow.handle_generic_review")
     @patch("usecases.gif_flow.execute_gif")
-    def test_execute_path(
-        self,
-        mock_execute,
-        mock_handle_review,
-        mock_build_summary,
-        mock_collect,
-    ):
+    def test_execute_path(self, mock_execute, mock_handle_review, mock_build_summary, mock_collect):
         form = GifForm()
         updated_form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
         media_info = object()
-
         mock_collect.return_value = (updated_form, media_info)
         mock_build_summary.return_value = "summary"
         mock_handle_review.return_value = FlowResult(kind="execute", form=updated_form)
-
-        result = run_gif_iteration(form)
-
+        ui = Mock()
+        result = run_gif_iteration(form, ui)
         self.assertEqual(result.kind, "done")
         mock_execute.assert_called_once_with(updated_form, dry_run=False)
 
@@ -114,23 +96,15 @@ class TestRunGifIteration(unittest.TestCase):
     @patch("usecases.gif_flow.build_gif_summary")
     @patch("usecases.shared_flow.handle_generic_review")
     @patch("usecases.gif_flow.execute_gif")
-    def test_dry_run_path(
-        self,
-        mock_execute,
-        mock_handle_review,
-        mock_build_summary,
-        mock_collect,
-    ):
+    def test_dry_run_path(self, mock_execute, mock_handle_review, mock_build_summary, mock_collect):
         form = GifForm()
         updated_form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
         media_info = object()
-
         mock_collect.return_value = (updated_form, media_info)
         mock_build_summary.return_value = "summary"
         mock_handle_review.return_value = FlowResult(kind="dry_run", form=updated_form)
-
-        result = run_gif_iteration(form)
-
+        ui = Mock()
+        result = run_gif_iteration(form, ui)
         self.assertEqual(result.kind, "done")
         mock_execute.assert_called_once_with(updated_form, dry_run=True)
 
@@ -138,23 +112,15 @@ class TestRunGifIteration(unittest.TestCase):
     @patch("usecases.gif_flow.build_gif_summary")
     @patch("usecases.shared_flow.handle_generic_review")
     @patch("usecases.gif_flow.execute_gif")
-    def test_retry_path(
-        self,
-        mock_execute,
-        mock_handle_review,
-        mock_build_summary,
-        mock_collect,
-    ):
+    def test_retry_path(self, mock_execute, mock_handle_review, mock_build_summary, mock_collect):
         form = GifForm()
         updated_form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
         media_info = object()
-
         mock_collect.return_value = (updated_form, media_info)
         mock_build_summary.return_value = "summary"
         mock_handle_review.return_value = FlowResult(kind="retry", form=updated_form)
-
-        result = run_gif_iteration(form)
-
+        ui = Mock()
+        result = run_gif_iteration(form, ui)
         self.assertEqual(result.kind, "retry")
         mock_execute.assert_not_called()
 
@@ -164,9 +130,8 @@ class TestRunGifIteration(unittest.TestCase):
 
         form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
         mock_collect.side_effect = ValidationError("bad input")
-
-        result = run_gif_iteration(form)
-
+        ui = Mock()
+        result = run_gif_iteration(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, form)
 

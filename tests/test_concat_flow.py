@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from usecases.concat_flow import (
     ConcatForm,
@@ -132,7 +132,8 @@ class TestRunConcatIteration(unittest.TestCase):
         mock_build_concat_summary.return_value = "summary"
         mock_handle_concat_review.return_value = FlowResult(kind="execute", form=updated_form)
 
-        result = run_concat_iteration(form)
+        ui = Mock()
+        result = run_concat_iteration(form, ui)
 
         self.assertEqual(result.kind, "done")
         self.assertEqual(result.form, updated_form)
@@ -161,7 +162,8 @@ class TestRunConcatIteration(unittest.TestCase):
         mock_build_concat_summary.return_value = "summary"
         mock_handle_concat_review.return_value = FlowResult(kind="dry_run", form=updated_form)
 
-        result = run_concat_iteration(form)
+        ui = Mock()
+        result = run_concat_iteration(form, ui)
 
         self.assertEqual(result.kind, "done")
         self.assertEqual(result.form, updated_form)
@@ -190,7 +192,8 @@ class TestRunConcatIteration(unittest.TestCase):
         mock_build_concat_summary.return_value = "summary"
         mock_handle_concat_review.return_value = FlowResult(kind="retry", form=updated_form)
 
-        result = run_concat_iteration(form)
+        ui = Mock()
+        result = run_concat_iteration(form, ui)
 
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, updated_form)
@@ -207,7 +210,8 @@ class TestRunConcatIteration(unittest.TestCase):
         )
         mock_collect_concat_input.side_effect = ValidationError("bad input")
 
-        result = run_concat_iteration(form)
+        ui = Mock()
+        result = run_concat_iteration(form, ui)
 
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, form)

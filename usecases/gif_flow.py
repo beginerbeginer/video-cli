@@ -3,17 +3,16 @@ from dataclasses import dataclass, replace
 from ffmpeg.commands import build_gif_command
 from ffmpeg.probe import probe_media_info
 from shared.formatters import format_media_info_summary
-from ui.prompts import ask_text, require_non_empty
-from ui.review import ask_field_to_edit
 from usecases.flow_result import FlowResult
 from usecases.shared_flow import execute_with_output, handle_generic_review, run_flow, run_generic_iteration
+from usecases.ui_port import UIPort
 from validation.file_validators import (
     validate_gif_output_extension,
     validate_input_file_exists,
     validate_output_directory_exists,
     validate_video_file_extension,
 )
-from validation.value_validators import validate_fps, validate_gif_width
+from validation.value_validators import require_non_empty, validate_fps, validate_gif_width
 
 
 @dataclass
@@ -24,48 +23,11 @@ class GifForm:
     output_file: str = "./output.gif"
 
 
-def ask_gif_input_file(default_value: str) -> str:
-    return require_non_empty(
-        ask_text(
-            "対象の動画ファイルを入力してください\n例: ./input/video.mp4",
-            default=default_value,
-        ),
+def collect_gif_input(form: GifForm, ui: UIPort):
+    input_file = require_non_empty(
+        ui.ask_text("対象の動画ファイルを入力してください\n例: ./input/video.mp4", default=form.input_file),
         "入力ファイル",
     )
-
-
-def ask_gif_fps(default_value: str) -> str:
-    return require_non_empty(
-        ask_text(
-            "フレームレートを入力してください\n整数: 1〜60（数値が高いほど滑らか・ファイルサイズ大）\n例: 10",
-            default=default_value,
-        ),
-        "フレームレート",
-    )
-
-
-def ask_gif_width(default_value: str) -> str:
-    return require_non_empty(
-        ask_text(
-            "幅を入力してください（高さは自動調整）\n整数: 16〜1920\n例: 480",
-            default=default_value,
-        ),
-        "幅",
-    )
-
-
-def ask_gif_output(default_value: str) -> str:
-    return require_non_empty(
-        ask_text(
-            "出力ファイル名を入力してください\n例: ./output/animation.gif",
-            default=default_value,
-        ),
-        "出力ファイル",
-    )
-
-
-def collect_gif_input(form: GifForm):
-    input_file = ask_gif_input_file(form.input_file)
     validate_input_file_exists(input_file)
     validate_video_file_extension(input_file)
 
@@ -74,23 +36,32 @@ def collect_gif_input(form: GifForm):
     print(format_media_info_summary(media_info))
     print()
 
-    fps_raw = ask_gif_fps(form.fps_raw)
+    fps_raw = require_non_empty(
+        ui.ask_text(
+            "フレームレートを入力してください\n整数: 1〜60（数値が高いほど滑らか・ファイルサイズ大）\n例: 10",
+            default=form.fps_raw,
+        ),
+        "フレームレート",
+    )
     validate_fps(fps_raw, "フレームレート")
 
-    width_raw = ask_gif_width(form.width_raw)
+    width_raw = require_non_empty(
+        ui.ask_text("幅を入力してください（高さは自動調整）\n整数: 16〜1920\n例: 480", default=form.width_raw),
+        "幅",
+    )
     validate_gif_width(width_raw, "幅")
 
-    output_file = ask_gif_output(form.output_file)
+    output_file = require_non_empty(
+        ui.ask_text("出力ファイル名を入力してください\n例: ./output/animation.gif", default=form.output_file),
+        "出力ファイル",
+    )
     validate_gif_output_extension(output_file)
     validate_output_directory_exists(output_file)
 
-    return replace(
-        form,
-        input_file=input_file,
-        fps_raw=fps_raw,
-        width_raw=width_raw,
-        output_file=output_file,
-    ), media_info
+    return (
+        replace(form, input_file=input_file, fps_raw=fps_raw, width_raw=width_raw, output_file=output_file),
+        media_info,
+    )
 
 
 def build_gif_summary(form: GifForm, media_info) -> str:
@@ -110,14 +81,15 @@ def build_gif_summary(form: GifForm, media_info) -> str:
     )
 
 
-def edit_gif_form(form: GifForm) -> GifForm:
-    field = ask_field_to_edit(
+def edit_gif_form(form: GifForm, ui: UIPort) -> GifForm:
+    field = ui.ask_menu(
+        "修正したい項目を選んでください",
         [
             ("入力ファイル", "input_file"),
             ("フレームレート", "fps_raw"),
             ("幅", "width_raw"),
             ("出力ファイル", "output_file"),
-        ]
+        ],
     )
 
     prompts = {
@@ -127,12 +99,12 @@ def edit_gif_form(form: GifForm) -> GifForm:
         "output_file": ("出力ファイルを再入力してください", "出力ファイル"),
     }
     prompt, label = prompts[field]
-    value = require_non_empty(ask_text(prompt, default=getattr(form, field)), label)
+    value = require_non_empty(ui.ask_text(prompt, default=getattr(form, field)), label)
     return replace(form, **{field: value})
 
 
-def handle_gif_review(form: GifForm) -> FlowResult:
-    return handle_generic_review(form, GifForm, edit_gif_form)
+def handle_gif_review(form: GifForm, ui: UIPort) -> FlowResult:
+    return handle_generic_review(form, GifForm, lambda f: edit_gif_form(f, ui), ui)
 
 
 def execute_gif(form: GifForm, dry_run: bool = False) -> None:
@@ -149,7 +121,7 @@ def execute_gif(form: GifForm, dry_run: bool = False) -> None:
     execute_with_output(command, form.output_file, dry_run)
 
 
-def run_gif_iteration(form: GifForm) -> FlowResult:
+def run_gif_iteration(form: GifForm, ui: UIPort) -> FlowResult:
     return run_generic_iteration(
         form,
         collect_gif_input,
@@ -157,8 +129,9 @@ def run_gif_iteration(form: GifForm) -> FlowResult:
         GifForm,
         edit_gif_form,
         execute_gif,
+        ui,
     )
 
 
-def run_gif_flow() -> None:
-    run_flow(GifForm(), run_gif_iteration)
+def run_gif_flow(ui: UIPort) -> None:
+    run_flow(GifForm(), run_gif_iteration, ui)

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from usecases.flow_result import FlowResult
 from usecases.fps_flow import (
@@ -51,9 +51,8 @@ class TestRunFpsIteration(unittest.TestCase):
         mock_collect.return_value = (updated, object())
         mock_summary.return_value = "summary"
         mock_review.return_value = FlowResult(kind="execute", form=updated)
-
-        result = run_fps_iteration(form)
-
+        ui = Mock()
+        result = run_fps_iteration(form, ui)
         self.assertEqual(result.kind, "done")
         mock_execute.assert_called_once_with(updated, dry_run=False)
 
@@ -69,9 +68,8 @@ class TestRunFpsIteration(unittest.TestCase):
         mock_collect.return_value = (updated, object())
         mock_summary.return_value = "summary"
         mock_review.return_value = FlowResult(kind="dry_run", form=updated)
-
-        result = run_fps_iteration(form)
-
+        ui = Mock()
+        result = run_fps_iteration(form, ui)
         self.assertEqual(result.kind, "done")
         mock_execute.assert_called_once_with(updated, dry_run=True)
 
@@ -81,9 +79,8 @@ class TestRunFpsIteration(unittest.TestCase):
 
         form = FpsForm(input_file="in.mp4", fps_raw="30", output_file="out.mp4")
         mock_collect.side_effect = ValidationError("bad input")
-
-        result = run_fps_iteration(form)
-
+        ui = Mock()
+        result = run_fps_iteration(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, form)
 

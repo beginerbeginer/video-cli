@@ -464,6 +464,16 @@ class TestBuildFpsCommand(unittest.TestCase):
         ca_idx = command.index("-c:a")
         self.assertEqual(command[ca_idx + 1], "copy")
 
+    def test_webm_input_mp4_output_uses_aac(self):
+        command = build_fps_command("in.webm", "out.mp4", fps=30.0)
+        ca_idx = command.index("-c:a")
+        self.assertEqual(command[ca_idx + 1], "aac")
+
+    def test_webm_input_mkv_output_uses_copy(self):
+        command = build_fps_command("in.webm", "out.mkv", fps=30.0)
+        ca_idx = command.index("-c:a")
+        self.assertEqual(command[ca_idx + 1], "copy")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -3,16 +3,16 @@ from dataclasses import dataclass, replace
 from ffmpeg.commands import build_audio_extract_command
 from ffmpeg.probe import probe_media_info
 from shared.formatters import format_media_info_summary
-from ui.prompts import ask_text, require_non_empty
-from ui.review import ask_field_to_edit
 from usecases.flow_result import FlowResult
 from usecases.shared_flow import execute_with_output, handle_generic_review, run_flow, run_generic_iteration
+from usecases.ui_port import UIPort
 from validation.file_validators import (
     validate_audio_output_extension,
     validate_input_file_exists,
     validate_output_directory_exists,
     validate_video_file_extension,
 )
+from validation.value_validators import require_non_empty
 
 
 @dataclass
@@ -21,28 +21,11 @@ class AudioExtractForm:
     output_file: str = "./output-audio.mp3"
 
 
-def ask_audio_extract_input_file(default_value: str) -> str:
-    return require_non_empty(
-        ask_text(
-            "対象の動画ファイルを入力してください\n例: ./input/video.mp4",
-            default=default_value,
-        ),
+def collect_audio_extract_input(form: AudioExtractForm, ui: UIPort):
+    input_file = require_non_empty(
+        ui.ask_text("対象の動画ファイルを入力してください\n例: ./input/video.mp4", default=form.input_file),
         "入力ファイル",
     )
-
-
-def ask_audio_extract_output(default_value: str) -> str:
-    return require_non_empty(
-        ask_text(
-            "出力ファイル名を入力してください\n拡張子で形式を指定: .mp3 / .aac / .wav / .m4a\n例: ./output/audio.mp3",
-            default=default_value,
-        ),
-        "出力ファイル",
-    )
-
-
-def collect_audio_extract_input(form: AudioExtractForm):
-    input_file = ask_audio_extract_input_file(form.input_file)
     validate_input_file_exists(input_file)
     validate_video_file_extension(input_file)
 
@@ -51,7 +34,13 @@ def collect_audio_extract_input(form: AudioExtractForm):
     print(format_media_info_summary(media_info))
     print()
 
-    output_file = ask_audio_extract_output(form.output_file)
+    output_file = require_non_empty(
+        ui.ask_text(
+            "出力ファイル名を入力してください\n拡張子で形式を指定: .mp3 / .aac / .wav / .m4a\n例: ./output/audio.mp3",
+            default=form.output_file,
+        ),
+        "出力ファイル",
+    )
     validate_audio_output_extension(output_file)
     validate_output_directory_exists(output_file)
 
@@ -71,12 +60,13 @@ def build_audio_extract_summary(form: AudioExtractForm, media_info) -> str:
     )
 
 
-def edit_audio_extract_form(form: AudioExtractForm) -> AudioExtractForm:
-    field = ask_field_to_edit(
+def edit_audio_extract_form(form: AudioExtractForm, ui: UIPort) -> AudioExtractForm:
+    field = ui.ask_menu(
+        "修正したい項目を選んでください",
         [
             ("入力ファイル", "input_file"),
             ("出力ファイル", "output_file"),
-        ]
+        ],
     )
 
     prompts = {
@@ -84,12 +74,12 @@ def edit_audio_extract_form(form: AudioExtractForm) -> AudioExtractForm:
         "output_file": ("出力ファイルを再入力してください", "出力ファイル"),
     }
     prompt, label = prompts[field]
-    value = require_non_empty(ask_text(prompt, default=getattr(form, field)), label)
+    value = require_non_empty(ui.ask_text(prompt, default=getattr(form, field)), label)
     return replace(form, **{field: value})
 
 
-def handle_audio_extract_review(form: AudioExtractForm) -> FlowResult:
-    return handle_generic_review(form, AudioExtractForm, edit_audio_extract_form)
+def handle_audio_extract_review(form: AudioExtractForm, ui: UIPort) -> FlowResult:
+    return handle_generic_review(form, AudioExtractForm, lambda f: edit_audio_extract_form(f, ui), ui)
 
 
 def execute_audio_extract(form: AudioExtractForm, dry_run: bool = False) -> None:
@@ -101,7 +91,7 @@ def execute_audio_extract(form: AudioExtractForm, dry_run: bool = False) -> None
     execute_with_output(command, form.output_file, dry_run)
 
 
-def run_audio_extract_iteration(form: AudioExtractForm) -> FlowResult:
+def run_audio_extract_iteration(form: AudioExtractForm, ui: UIPort) -> FlowResult:
     return run_generic_iteration(
         form,
         collect_audio_extract_input,
@@ -109,8 +99,9 @@ def run_audio_extract_iteration(form: AudioExtractForm) -> FlowResult:
         AudioExtractForm,
         edit_audio_extract_form,
         execute_audio_extract,
+        ui,
     )
 
 
-def run_audio_extract_flow() -> None:
-    run_flow(AudioExtractForm(), run_audio_extract_iteration)
+def run_audio_extract_flow(ui: UIPort) -> None:
+    run_flow(AudioExtractForm(), run_audio_extract_iteration, ui)

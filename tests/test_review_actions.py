@@ -1,7 +1,7 @@
 import unittest
 from dataclasses import dataclass
 
-from ui.review_actions import (
+from usecases.review_actions import (
     cancel_action,
     dry_run_action,
     edit_action,

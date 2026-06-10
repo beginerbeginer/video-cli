@@ -3,16 +3,15 @@ from dataclasses import dataclass, replace
 from ffmpeg.commands import build_resize_command
 from ffmpeg.probe import probe_media_info
 from shared.formatters import format_media_info_summary
-from ui.prompts import ask_text, require_non_empty
-from ui.review import ask_field_to_edit
 from usecases.flow_result import FlowResult
 from usecases.shared_flow import execute_with_output, handle_generic_review, run_flow, run_generic_iteration
+from usecases.ui_port import UIPort
 from validation.file_validators import (
     validate_input_file_exists,
     validate_output_directory_exists,
     validate_video_file_extension,
 )
-from validation.value_validators import validate_dimension
+from validation.value_validators import require_non_empty, validate_dimension
 
 
 @dataclass
@@ -23,38 +22,11 @@ class ResizeForm:
     output_file: str = "./output-resized.mp4"
 
 
-def ask_resize_input_file(default_value: str) -> str:
-    return require_non_empty(
-        ask_text(
-            "対象の動画ファイルを入力してください\n例: ./input/video.mp4",
-            default=default_value,
-        ),
+def collect_resize_input(form: ResizeForm, ui: UIPort):
+    input_file = require_non_empty(
+        ui.ask_text("対象の動画ファイルを入力してください\n例: ./input/video.mp4", default=form.input_file),
         "入力ファイル",
     )
-
-
-def ask_resize_dimension(label: str, default_value: str) -> str:
-    return require_non_empty(
-        ask_text(
-            f"{label}を入力してください\n整数: 16〜7680\n例: {'1280' if label == '幅' else '720'}",
-            default=default_value,
-        ),
-        label,
-    )
-
-
-def ask_resize_output(default_value: str) -> str:
-    return require_non_empty(
-        ask_text(
-            "出力ファイル名を入力してください\n例: ./output/resized.mp4",
-            default=default_value,
-        ),
-        "出力ファイル",
-    )
-
-
-def collect_resize_input(form: ResizeForm):
-    input_file = ask_resize_input_file(form.input_file)
     validate_input_file_exists(input_file)
     validate_video_file_extension(input_file)
 
@@ -63,22 +35,28 @@ def collect_resize_input(form: ResizeForm):
     print(format_media_info_summary(media_info))
     print()
 
-    width_raw = ask_resize_dimension("幅", form.width_raw)
-    height_raw = ask_resize_dimension("高さ", form.height_raw)
+    width_raw = require_non_empty(
+        ui.ask_text("幅を入力してください\n整数: 16〜7680\n例: 1280", default=form.width_raw),
+        "幅",
+    )
+    height_raw = require_non_empty(
+        ui.ask_text("高さを入力してください\n整数: 16〜7680\n例: 720", default=form.height_raw),
+        "高さ",
+    )
 
     validate_dimension(width_raw, "幅")
     validate_dimension(height_raw, "高さ")
 
-    output_file = ask_resize_output(form.output_file)
+    output_file = require_non_empty(
+        ui.ask_text("出力ファイル名を入力してください\n例: ./output/resized.mp4", default=form.output_file),
+        "出力ファイル",
+    )
     validate_output_directory_exists(output_file)
 
-    return replace(
-        form,
-        input_file=input_file,
-        width_raw=width_raw,
-        height_raw=height_raw,
-        output_file=output_file,
-    ), media_info
+    return (
+        replace(form, input_file=input_file, width_raw=width_raw, height_raw=height_raw, output_file=output_file),
+        media_info,
+    )
 
 
 def build_resize_summary(form: ResizeForm, media_info) -> str:
@@ -97,14 +75,15 @@ def build_resize_summary(form: ResizeForm, media_info) -> str:
     )
 
 
-def edit_resize_form(form: ResizeForm) -> ResizeForm:
-    field = ask_field_to_edit(
+def edit_resize_form(form: ResizeForm, ui: UIPort) -> ResizeForm:
+    field = ui.ask_menu(
+        "修正したい項目を選んでください",
         [
             ("入力ファイル", "input_file"),
             ("幅", "width_raw"),
             ("高さ", "height_raw"),
             ("出力ファイル", "output_file"),
-        ]
+        ],
     )
 
     prompts = {
@@ -114,12 +93,12 @@ def edit_resize_form(form: ResizeForm) -> ResizeForm:
         "output_file": ("出力ファイルを再入力してください", "出力ファイル"),
     }
     prompt, label = prompts[field]
-    value = require_non_empty(ask_text(prompt, default=getattr(form, field)), label)
+    value = require_non_empty(ui.ask_text(prompt, default=getattr(form, field)), label)
     return replace(form, **{field: value})
 
 
-def handle_resize_review(form: ResizeForm) -> FlowResult:
-    return handle_generic_review(form, ResizeForm, edit_resize_form)
+def handle_resize_review(form: ResizeForm, ui: UIPort) -> FlowResult:
+    return handle_generic_review(form, ResizeForm, lambda f: edit_resize_form(f, ui), ui)
 
 
 def execute_resize(form: ResizeForm, dry_run: bool = False) -> None:
@@ -136,7 +115,7 @@ def execute_resize(form: ResizeForm, dry_run: bool = False) -> None:
     execute_with_output(command, form.output_file, dry_run)
 
 
-def run_resize_iteration(form: ResizeForm) -> FlowResult:
+def run_resize_iteration(form: ResizeForm, ui: UIPort) -> FlowResult:
     return run_generic_iteration(
         form,
         collect_resize_input,
@@ -144,8 +123,9 @@ def run_resize_iteration(form: ResizeForm) -> FlowResult:
         ResizeForm,
         edit_resize_form,
         execute_resize,
+        ui,
     )
 
 
-def run_resize_flow() -> None:
-    run_flow(ResizeForm(), run_resize_iteration)
+def run_resize_flow(ui: UIPort) -> None:
+    run_flow(ResizeForm(), run_resize_iteration, ui)
