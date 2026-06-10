@@ -221,13 +221,14 @@ def build_fps_command(
     fps: float,
 ) -> list[str]:
     # 出力が WebM → Opus 必須（WebM は Vorbis/Opus のみ許容）。
-    # 入力が WebM かつ出力が非 WebM → Opus を MP4 等へ copy 不可なので AAC に再エンコード。
-    # それ以外 → copy でコーデック互換性を維持。
+    # 入力が WebM かつ出力が MP4/MOV → Opus を copy 不可なので AAC に再エンコード。
+    # MKV 等 Opus を格納できるコンテナへの変換は copy で十分（不要な再エンコードを避ける）。
     out_webm = output_file.lower().endswith(".webm")
     in_webm = input_file.lower().endswith(".webm")
+    out_mp4_family = output_file.lower().endswith((".mp4", ".m4v", ".mov"))
     if out_webm:
         audio_codec = "libopus"
-    elif in_webm:
+    elif in_webm and out_mp4_family:
         audio_codec = "aac"
     else:
         audio_codec = "copy"
