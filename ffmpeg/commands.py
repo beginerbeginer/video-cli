@@ -220,9 +220,17 @@ def build_fps_command(
     output_file: str,
     fps: float,
 ) -> list[str]:
-    # copy を基本とするが WebM は AAC 非対応のため libopus を使う。
-    # WebM の仕様上、音声は Vorbis/Opus のみ許容される。copy では muxer エラーになる。
-    audio_codec = "libopus" if output_file.lower().endswith(".webm") else "copy"
+    # 出力が WebM → Opus 必須（WebM は Vorbis/Opus のみ許容）。
+    # 入力が WebM かつ出力が非 WebM → Opus を MP4 等へ copy 不可なので AAC に再エンコード。
+    # それ以外 → copy でコーデック互換性を維持。
+    out_webm = output_file.lower().endswith(".webm")
+    in_webm = input_file.lower().endswith(".webm")
+    if out_webm:
+        audio_codec = "libopus"
+    elif in_webm:
+        audio_codec = "aac"
+    else:
+        audio_codec = "copy"
     fps_str = f"{fps:g}"
     return [
         "ffmpeg",
