@@ -3,15 +3,15 @@ from dataclasses import dataclass, replace
 from ffmpeg.commands import build_mute_command
 from ffmpeg.probe import probe_media_info
 from shared.formatters import format_media_info_summary
-from ui.prompts import ask_text, require_non_empty
-from ui.review import ask_field_to_edit
 from usecases.flow_result import FlowResult
 from usecases.shared_flow import execute_with_output, handle_generic_review, run_flow, run_generic_iteration
+from usecases.ui_port import UIPort
 from validation.file_validators import (
     validate_input_file_exists,
     validate_output_directory_exists,
     validate_video_file_extension,
 )
+from validation.value_validators import require_non_empty
 
 
 @dataclass
@@ -20,22 +20,11 @@ class MuteForm:
     output_file: str = "./output-muted.mp4"
 
 
-def ask_mute_input_file(default_value: str) -> str:
-    return require_non_empty(
-        ask_text("対象の動画ファイルを入力してください\n例: ./input/video.mp4", default=default_value),
+def collect_mute_input(form: MuteForm, ui: UIPort):
+    input_file = require_non_empty(
+        ui.ask_text("対象の動画ファイルを入力してください\n例: ./input/video.mp4", default=form.input_file),
         "入力ファイル",
     )
-
-
-def ask_mute_output(default_value: str) -> str:
-    return require_non_empty(
-        ask_text("出力ファイル名を入力してください\n例: ./output/muted.mp4", default=default_value),
-        "出力ファイル",
-    )
-
-
-def collect_mute_input(form: MuteForm):
-    input_file = ask_mute_input_file(form.input_file)
     validate_input_file_exists(input_file)
     validate_video_file_extension(input_file)
 
@@ -44,7 +33,10 @@ def collect_mute_input(form: MuteForm):
     print(format_media_info_summary(media_info))
     print()
 
-    output_file = ask_mute_output(form.output_file)
+    output_file = require_non_empty(
+        ui.ask_text("出力ファイル名を入力してください\n例: ./output/muted.mp4", default=form.output_file),
+        "出力ファイル",
+    )
     validate_output_directory_exists(output_file)
 
     return replace(form, input_file=input_file, output_file=output_file), media_info
@@ -63,24 +55,25 @@ def build_mute_summary(form: MuteForm, media_info) -> str:
     )
 
 
-def edit_mute_form(form: MuteForm) -> MuteForm:
-    field = ask_field_to_edit(
+def edit_mute_form(form: MuteForm, ui: UIPort) -> MuteForm:
+    field = ui.ask_menu(
+        "修正したい項目を選んでください",
         [
             ("入力ファイル", "input_file"),
             ("出力ファイル", "output_file"),
-        ]
+        ],
     )
     prompts = {
         "input_file": ("入力ファイルを再入力してください", "入力ファイル"),
         "output_file": ("出力ファイルを再入力してください", "出力ファイル"),
     }
     prompt, label = prompts[field]
-    value = require_non_empty(ask_text(prompt, default=getattr(form, field)), label)
+    value = require_non_empty(ui.ask_text(prompt, default=getattr(form, field)), label)
     return replace(form, **{field: value})
 
 
-def handle_mute_review(form: MuteForm) -> FlowResult:
-    return handle_generic_review(form, MuteForm, edit_mute_form)
+def handle_mute_review(form: MuteForm, ui: UIPort) -> FlowResult:
+    return handle_generic_review(form, MuteForm, lambda f: edit_mute_form(f, ui), ui)
 
 
 def execute_mute(form: MuteForm, dry_run: bool = False) -> None:
@@ -89,7 +82,7 @@ def execute_mute(form: MuteForm, dry_run: bool = False) -> None:
     execute_with_output(command, form.output_file, dry_run)
 
 
-def run_mute_iteration(form: MuteForm) -> FlowResult:
+def run_mute_iteration(form: MuteForm, ui: UIPort) -> FlowResult:
     return run_generic_iteration(
         form,
         collect_mute_input,
@@ -97,8 +90,9 @@ def run_mute_iteration(form: MuteForm) -> FlowResult:
         MuteForm,
         edit_mute_form,
         execute_mute,
+        ui,
     )
 
 
-def run_mute_flow() -> None:
-    run_flow(MuteForm(), run_mute_iteration)
+def run_mute_flow(ui: UIPort) -> None:
+    run_flow(MuteForm(), run_mute_iteration, ui)

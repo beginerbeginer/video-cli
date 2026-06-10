@@ -3,11 +3,19 @@ from typing import Any, Callable
 from ffmpeg.runner import run_ffmpeg
 from shared.command_formatter import format_command
 from shared.errors import ValidationError
-from ui.review import ask_review_action
-from ui.review_actions import build_review_action_handlers
 from usecases.flow_result import FLOW_RESULT_FACTORIES, FlowResult
+from usecases.review_actions import build_review_action_handlers
+from usecases.ui_port import UIPort
 
 _REVIEW_ACTION_HANDLERS = build_review_action_handlers()
+
+_REVIEW_CHOICES = [
+    ("この内容で実行する", "execute"),
+    ("ドライランする（実行しない）", "dry_run"),
+    ("最初からやり直す", "restart"),
+    ("特定項目を修正する", "edit"),
+    ("中止する", "cancel"),
+]
 
 
 def execute_with_output(command: list[str], output_file: str, dry_run: bool) -> None:
@@ -27,8 +35,9 @@ def handle_generic_review(
     form: Any,
     empty_form_factory: Callable,
     edit_form_fn: Callable,
+    ui: UIPort,
 ) -> FlowResult:
-    action = ask_review_action()
+    action = ui.ask_menu("次にどうしますか？", _REVIEW_CHOICES)
     flow_action, updated_form = _REVIEW_ACTION_HANDLERS[action](
         form,
         {
@@ -46,13 +55,19 @@ def run_generic_iteration(
     empty_form_factory: Callable,
     edit_form_fn: Callable,
     execute_fn: Callable,
+    ui: UIPort,
 ) -> FlowResult:
     try:
-        updated_form, *extra = collect_fn(form)
+        updated_form, *extra = collect_fn(form, ui)
         summary = build_summary_fn(updated_form, *extra)
         print("\n" + summary + "\n")
 
-        review_result = handle_generic_review(updated_form, empty_form_factory, edit_form_fn)
+        review_result = handle_generic_review(
+            updated_form,
+            empty_form_factory,
+            lambda f: edit_form_fn(f, ui),
+            ui,
+        )
 
         if review_result.kind in {"retry", "done"}:
             return review_result
@@ -65,9 +80,9 @@ def run_generic_iteration(
         return FlowResult(kind="retry", form=form)
 
 
-def run_flow(form: Any, iterate_fn: Callable) -> None:
+def run_flow(form: Any, iterate_fn: Callable, ui: UIPort) -> None:
     while True:
-        result = iterate_fn(form)
+        result = iterate_fn(form, ui)
         if result.kind == "done":
             return
         form = result.form

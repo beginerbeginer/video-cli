@@ -1,5 +1,5 @@
 from domain import operations
-from ui.prompts import ask_menu
+from ui.cli.prompts import ask_menu
 
 
 def prompt_main_menu() -> str:

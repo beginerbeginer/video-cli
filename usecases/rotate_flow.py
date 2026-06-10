@@ -3,15 +3,15 @@ from dataclasses import dataclass, replace
 from ffmpeg.commands import ROTATE_FILTERS, build_rotate_command
 from ffmpeg.probe import probe_media_info
 from shared.formatters import format_media_info_summary
-from ui.prompts import ask_menu, ask_text, require_non_empty
-from ui.review import ask_field_to_edit
 from usecases.flow_result import FlowResult
 from usecases.shared_flow import execute_with_output, handle_generic_review, run_flow, run_generic_iteration
+from usecases.ui_port import UIPort
 from validation.file_validators import (
     validate_input_file_exists,
     validate_output_directory_exists,
     validate_video_file_extension,
 )
+from validation.value_validators import require_non_empty
 
 _DIRECTION_LABELS = [
     ("右に90°回転（スマホ縦動画に多い）", "right90"),
@@ -37,27 +37,16 @@ class RotateForm:
     output_file: str = "./output-rotated.mp4"
 
 
-def ask_rotate_input_file(default_value: str) -> str:
-    return require_non_empty(
-        ask_text("対象の動画ファイルを入力してください\n例: ./input/video.mp4", default=default_value),
+def ask_rotate_direction(default_value: str, ui: UIPort) -> str:
+    print(f"回転・反転の方向を選択してください [current: {_DIRECTION_DISPLAY.get(default_value, default_value)}]")
+    return ui.ask_menu("", _DIRECTION_LABELS)
+
+
+def collect_rotate_input(form: RotateForm, ui: UIPort):
+    input_file = require_non_empty(
+        ui.ask_text("対象の動画ファイルを入力してください\n例: ./input/video.mp4", default=form.input_file),
         "入力ファイル",
     )
-
-
-def ask_rotate_direction(default_value: str) -> str:
-    print(f"回転・反転の方向を選択してください [current: {_DIRECTION_DISPLAY.get(default_value, default_value)}]")
-    return ask_menu("", _DIRECTION_LABELS)
-
-
-def ask_rotate_output(default_value: str) -> str:
-    return require_non_empty(
-        ask_text("出力ファイル名を入力してください\n例: ./output/rotated.mp4", default=default_value),
-        "出力ファイル",
-    )
-
-
-def collect_rotate_input(form: RotateForm):
-    input_file = ask_rotate_input_file(form.input_file)
     validate_input_file_exists(input_file)
     validate_video_file_extension(input_file)
 
@@ -66,8 +55,11 @@ def collect_rotate_input(form: RotateForm):
     print(format_media_info_summary(media_info))
     print()
 
-    direction = ask_rotate_direction(form.direction)
-    output_file = ask_rotate_output(form.output_file)
+    direction = ask_rotate_direction(form.direction, ui)
+    output_file = require_non_empty(
+        ui.ask_text("出力ファイル名を入力してください\n例: ./output/rotated.mp4", default=form.output_file),
+        "出力ファイル",
+    )
     validate_output_directory_exists(output_file)
 
     return replace(form, input_file=input_file, direction=direction, output_file=output_file), media_info
@@ -85,28 +77,29 @@ def build_rotate_summary(form: RotateForm, media_info) -> str:
     )
 
 
-def edit_rotate_form(form: RotateForm) -> RotateForm:
-    field = ask_field_to_edit(
+def edit_rotate_form(form: RotateForm, ui: UIPort) -> RotateForm:
+    field = ui.ask_menu(
+        "修正したい項目を選んでください",
         [
             ("入力ファイル", "input_file"),
             ("方向", "direction"),
             ("出力ファイル", "output_file"),
-        ]
+        ],
     )
     if field == "direction":
-        value = ask_rotate_direction(form.direction)
+        value = ask_rotate_direction(form.direction, ui)
     else:
         prompts = {
             "input_file": ("入力ファイルを再入力してください", "入力ファイル"),
             "output_file": ("出力ファイルを再入力してください", "出力ファイル"),
         }
         prompt, label = prompts[field]
-        value = require_non_empty(ask_text(prompt, default=getattr(form, field)), label)
+        value = require_non_empty(ui.ask_text(prompt, default=getattr(form, field)), label)
     return replace(form, **{field: value})
 
 
-def handle_rotate_review(form: RotateForm) -> FlowResult:
-    return handle_generic_review(form, RotateForm, edit_rotate_form)
+def handle_rotate_review(form: RotateForm, ui: UIPort) -> FlowResult:
+    return handle_generic_review(form, RotateForm, lambda f: edit_rotate_form(f, ui), ui)
 
 
 def execute_rotate(form: RotateForm, dry_run: bool = False) -> None:
@@ -115,7 +108,7 @@ def execute_rotate(form: RotateForm, dry_run: bool = False) -> None:
     execute_with_output(command, form.output_file, dry_run)
 
 
-def run_rotate_iteration(form: RotateForm) -> FlowResult:
+def run_rotate_iteration(form: RotateForm, ui: UIPort) -> FlowResult:
     return run_generic_iteration(
         form,
         collect_rotate_input,
@@ -123,8 +116,9 @@ def run_rotate_iteration(form: RotateForm) -> FlowResult:
         RotateForm,
         edit_rotate_form,
         execute_rotate,
+        ui,
     )
 
 
-def run_rotate_flow() -> None:
-    run_flow(RotateForm(), run_rotate_iteration)
+def run_rotate_flow(ui: UIPort) -> None:
+    run_flow(RotateForm(), run_rotate_iteration, ui)

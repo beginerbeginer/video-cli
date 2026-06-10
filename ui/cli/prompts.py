@@ -1,7 +1,5 @@
 from collections.abc import Sequence
 
-from shared.errors import ValidationError
-
 
 def ask_text(message: str, default: str | None = None) -> str:
     prompt = message
@@ -32,9 +30,3 @@ def ask_menu(message: str, choices: Sequence[tuple[str, str]]) -> str:
             return choices[selected - 1][1]
 
         print("選択肢の範囲内で入力してください。")
-
-
-def require_non_empty(value: str, field_name: str) -> str:
-    if value.strip() == "":
-        raise ValidationError(f"{field_name}は空にできません。")
-    return value

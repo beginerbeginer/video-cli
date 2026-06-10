@@ -1,8 +1,9 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from usecases.crop_flow import (
     CropForm,
+    edit_crop_form,
     execute_crop,
     handle_crop_review,
     run_crop_iteration,
@@ -11,40 +12,46 @@ from usecases.flow_result import FlowResult
 
 
 class TestHandleCropReview(unittest.TestCase):
-    @patch("usecases.shared_flow.ask_review_action", return_value="cancel")
-    def test_cancel(self, _mock_action):
+    def test_cancel(self):
         form = CropForm()
-        result = handle_crop_review(form)
+        ui = Mock()
+        ui.ask_menu.return_value = "cancel"
+        result = handle_crop_review(form, ui)
         self.assertEqual(result.kind, "done")
 
-    @patch("usecases.shared_flow.ask_review_action", return_value="restart")
-    def test_restart(self, _mock_action):
+    def test_restart(self):
         form = CropForm(input_file="in.mp4", width=640, height=360, x=0, y=0, output_file="out.mp4")
-        result = handle_crop_review(form)
+        ui = Mock()
+        ui.ask_menu.return_value = "restart"
+        result = handle_crop_review(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, CropForm())
 
-    @patch("usecases.shared_flow.ask_review_action", return_value="execute")
-    def test_execute(self, _mock_action):
+    def test_execute(self):
         form = CropForm(input_file="in.mp4", width=640, height=360, x=0, y=0, output_file="out.mp4")
-        result = handle_crop_review(form)
+        ui = Mock()
+        ui.ask_menu.return_value = "execute"
+        result = handle_crop_review(form, ui)
         self.assertEqual(result.kind, "execute")
 
-    @patch("usecases.shared_flow.ask_review_action", return_value="dry_run")
-    def test_dry_run(self, _mock_action):
+    def test_dry_run(self):
         form = CropForm(input_file="in.mp4", width=640, height=360, x=0, y=0, output_file="out.mp4")
-        result = handle_crop_review(form)
+        ui = Mock()
+        ui.ask_menu.return_value = "dry_run"
+        result = handle_crop_review(form, ui)
         self.assertEqual(result.kind, "dry_run")
 
-    @patch("usecases.shared_flow.ask_review_action", return_value="edit")
     @patch("usecases.crop_flow.edit_crop_form")
-    def test_edit(self, mock_edit, _mock_action):
+    def test_edit(self, mock_edit):
         form = CropForm(input_file="in.mp4", width=640, height=360, x=0, y=0, output_file="out.mp4")
         edited = CropForm(input_file="in.mp4", width=320, height=240, x=0, y=0, output_file="out.mp4")
         mock_edit.return_value = edited
-        result = handle_crop_review(form)
+        ui = Mock()
+        ui.ask_menu.return_value = "edit"
+        result = handle_crop_review(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, edited)
+        mock_edit.assert_called_once_with(form, ui)
 
 
 class TestExecuteCrop(unittest.TestCase):
@@ -77,7 +84,8 @@ class TestRunCropIteration(unittest.TestCase):
         mock_collect.return_value = (updated, object())
         mock_summary.return_value = "summary"
         mock_review.return_value = FlowResult(kind="execute", form=updated)
-        result = run_crop_iteration(form)
+        ui = Mock()
+        result = run_crop_iteration(form, ui)
         self.assertEqual(result.kind, "done")
         mock_execute.assert_called_once_with(updated, dry_run=False)
 
@@ -87,9 +95,38 @@ class TestRunCropIteration(unittest.TestCase):
 
         form = CropForm(input_file="in.mp4", width=640, height=360, x=0, y=0, output_file="out.mp4")
         mock_collect.side_effect = ValidationError("bad")
-        result = run_crop_iteration(form)
+        ui = Mock()
+        result = run_crop_iteration(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, form)
+
+
+class TestEditCropForm(unittest.TestCase):
+    def _make_ui(self, field_choice, text_return="100"):
+        ui = Mock()
+        ui.ask_menu.return_value = field_choice
+        ui.ask_text.return_value = text_return
+        return ui
+
+    def test_width_prompt_uses_japanese_label(self):
+        ui = self._make_ui("width")
+        edit_crop_form(CropForm(width=640), ui)
+        ui.ask_text.assert_called_once_with("幅 を再入力してください", default="640")
+
+    def test_height_prompt_uses_japanese_label(self):
+        ui = self._make_ui("height")
+        edit_crop_form(CropForm(height=360), ui)
+        ui.ask_text.assert_called_once_with("高さ を再入力してください", default="360")
+
+    def test_x_prompt_uses_japanese_label(self):
+        ui = self._make_ui("x")
+        edit_crop_form(CropForm(x=0), ui)
+        ui.ask_text.assert_called_once_with("X座標 を再入力してください", default="0")
+
+    def test_y_prompt_uses_japanese_label(self):
+        ui = self._make_ui("y")
+        edit_crop_form(CropForm(y=0), ui)
+        ui.ask_text.assert_called_once_with("Y座標 を再入力してください", default="0")
 
 
 if __name__ == "__main__":
