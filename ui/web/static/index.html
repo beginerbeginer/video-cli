@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>video-cli</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ─── Design Tokens ─── */
+:root {
+  --bg:       #0b0d12;
+  --bg2:      #10131a;
+  --bg3:      #171b24;
+  --bg4:      #1e2330;
+  --border:   #252b3a;
+  --border2:  #2e3547;
+  --text:     #c4cad6;
+  --text-hi:  #e8ecf4;
+  --text-lo:  #4e5668;
+  --gold:     #e8a020;
+  --gold2:    #f2be52;
+  --gold-dim: rgba(232,160,32,.12);
+  --green:    #30c98a;
+  --red:      #e05858;
+  --radius:   6px;
+  --font-ui:  'DM Sans', sans-serif;
+  --font-hd:  'Bricolage Grotesque', sans-serif;
+  --font-mono:'DM Mono', monospace;
+}
+
+/* ─── Reset ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: hidden;
+  /* subtle noise */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ─── Layout ─── */
+#app {
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+}
+
+/* ─── Header ─── */
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  position: relative;
+  z-index: 10;
+}
+
+.logo-mark {
+  width: 22px; height: 22px;
+  background: var(--gold);
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; color: var(--bg);
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-family: var(--font-hd);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-hi);
+}
+
+.logo-text span { color: var(--gold); }
+
+.header-sep {
+  flex: 1;
+}
+
+.header-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-lo);
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+/* ─── Main ─── */
+main {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  overflow: hidden;
+}
+
+/* ─── Left Panel ─── */
+#left-panel {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* ─── Op Grid ─── */
+#op-grid {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.op-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 7px 4px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background .15s, border-color .15s;
+  user-select: none;
+}
+.op-card:hover {
+  background: var(--bg3);
+  border-color: var(--border);
+}
+.op-card.active {
+  background: var(--gold-dim);
+  border-color: var(--gold);
+}
+
+.op-icon {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-lo);
+  transition: color .15s;
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+.op-card:hover .op-icon,
+.op-card.active .op-icon { color: var(--gold); }
+
+.op-label {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-lo);
+  text-align: center;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  transition: color .15s;
+}
+.op-card:hover .op-label,
+.op-card.active .op-label { color: var(--text); }
+
+/* ─── Form Panel ─── */
+#form-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-lo);
+  text-align: center;
+}
+.form-empty-icon {
+  font-size: 28px;
+  opacity: .3;
+  font-family: var(--font-mono);
+}
+.form-empty-text {
+  font-size: 12px;
+}
+
+.form-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.form-title {
+  font-family: var(--font-hd);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-hi);
+  letter-spacing: -0.02em;
+}
+.form-desc {
+  font-size: 11px;
+  color: var(--text-lo);
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-lo);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.field-input, .field-select, .field-textarea {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-hi);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color .15s;
+  -webkit-appearance: none;
+}
+.field-input:focus, .field-select:focus, .field-textarea:focus {
+  border-color: var(--gold);
+}
+.field-textarea {
+  resize: vertical;
+  min-height: 60px;
+  font-family: var(--font-mono);
+}
+.field-select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234e5668'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+.field-hint {
+  font-size: 10px;
+  color: var(--text-lo);
+}
+
+.run-btn {
+  width: 100%;
+  padding: 10px;
+  background: var(--gold);
+  border: none;
+  border-radius: var(--radius);
+  color: var(--bg);
+  font-family: var(--font-hd);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+  margin-top: 4px;
+}
+.run-btn:hover { background: var(--gold2); }
+.run-btn:active { transform: scale(.98); }
+.run-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+.run-btn.running {
+  background: var(--bg4);
+  color: var(--text-lo);
+  border: 1px solid var(--border);
+}
+
+/* ─── Right Panel ─── */
+#right-panel {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+}
+
+/* ─── Command Preview ─── */
+#cmd-preview {
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.preview-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  opacity: .6;
+}
+.preview-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-lo);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.preview-status {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-lo);
+}
+
+.preview-code {
+  padding: 12px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-lo);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-all;
+  min-height: 72px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+.preview-code .cmd-prog  { color: var(--gold); font-weight: 500; }
+.preview-code .cmd-flag  { color: #7eb8e8; }
+.preview-code .cmd-value { color: var(--text); }
+.preview-code .cmd-file  { color: var(--green); }
+
+/* ─── Log Panel ─── */
+#log-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  flex-shrink: 0;
+}
+.log-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-lo);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  font-size: 11px;
+}
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text-lo);
+  transition: background .3s;
+}
+.status-dot.running { background: var(--gold); animation: pulse 1s infinite; }
+.status-dot.success { background: var(--green); }
+.status-dot.error   { background: var(--red); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .3; }
+}
+
+.progress-bar-wrap {
+  height: 2px;
+  background: var(--bg3);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--gold2));
+  width: 0%;
+  transition: width .3s;
+}
+.progress-bar.indeterminate {
+  width: 40%;
+  animation: slide 1.2s ease-in-out infinite;
+}
+@keyframes slide {
+  0%   { transform: translateX(-150%); }
+  100% { transform: translateX(350%); }
+}
+
+#log-output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: var(--text-lo);
+}
+
+.log-line { display: block; }
+.log-line.cmd  { color: var(--gold); margin-bottom: 6px; }
+.log-line.err  { color: var(--red); }
+.log-line.ok   { color: var(--green); }
+.log-line.info { color: var(--text); }
+
+.log-empty {
+  color: var(--text-lo);
+  opacity: .4;
+  font-size: 11px;
+  padding: 8px 0;
+}
+
+/* ─── Animations ─── */
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.form-header, .field-group, .run-btn {
+  animation: fadein .2s ease both;
+}
+.field-group:nth-child(2) { animation-delay: .03s; }
+.field-group:nth-child(3) { animation-delay: .06s; }
+.field-group:nth-child(4) { animation-delay: .09s; }
+.field-group:nth-child(5) { animation-delay: .12s; }
+.field-group:nth-child(6) { animation-delay: .15s; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo-mark">▶</div>
+    <div class="logo-text">video<span>-cli</span></div>
+    <div class="header-sep"></div>
+    <div class="header-badge">DARK STUDIO</div>
+  </header>
+
+  <main>
+    <!-- Left: Op selector + Form -->
+    <div id="left-panel">
+      <div id="op-grid"></div>
+      <div id="form-panel">
+        <div class="form-empty">
+          <div class="form-empty-icon">⬡</div>
+          <div class="form-empty-text">上から操作を選択してください</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Preview + Log -->
+    <div id="right-panel">
+      <div id="cmd-preview">
+        <div class="preview-header">
+          <div class="preview-dot"></div>
+          <div class="preview-label">FFmpeg コマンド</div>
+          <div class="preview-status" id="preview-status">—</div>
+        </div>
+        <div class="preview-code" id="preview-code">操作を選択するとコマンドが表示されます</div>
+      </div>
+
+      <div id="log-panel">
+        <div class="log-header">
+          <div class="log-label">実行ログ</div>
+          <div class="status-indicator">
+            <div class="status-dot" id="status-dot"></div>
+            <span id="status-text" style="color:var(--text-lo)">待機中</span>
+          </div>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div id="log-output">
+          <span class="log-empty">実行すると FFmpeg のログが流れます…</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ─── Operation Definitions ───
+const OPS = {
+  trim:          { label: '切り出し', icon: '✦',  desc: '動画を時間で切り出す',        fields: [
+    { key:'input_file',  label:'入力ファイル', type:'text',   default:'./input.mp4' },
+    { key:'start_time',  label:'開始時間',    type:'text',   default:'00:00:10', hint:'HH:MM:SS または秒数' },
+    { key:'end_time',    label:'終了時間',    type:'text',   default:'00:00:30', hint:'HH:MM:SS または秒数' },
+    { key:'output_file', label:'出力ファイル', type:'text',   default:'./output-trim.mp4' },
+  ]},
+  resize:        { label:'リサイズ',  icon: '⤢',  desc: '解像度を変更する',           fields: [
+    { key:'input_file',  label:'入力ファイル', type:'text',   default:'./input.mp4' },
+    { key:'width',       label:'幅 (px)',     type:'number', default:'1280' },
+    { key:'height',      label:'高さ (px)',   type:'number', default:'720' },
+    { key:'output_file', label:'出力ファイル', type:'text',   default:'./output-resize.mp4' },
+  ]},
+  concat:        { label:'結合',     icon: '⊕',  desc: '動画を連結する',              fields: [
+    { key:'input_files', label:'入力ファイル（カンマ区切り）', type:'textarea', default:'./a.mp4, ./b.mp4', hint:'例: ./clip1.mp4, ./clip2.mp4' },
+    { key:'output_file', label:'出力ファイル', type:'text',   default:'./output-concat.mp4' },
+  ]},
+  volume:        { label:'音量',     icon: '◉',  desc: '音量を調整する',              fields: [
+    { key:'input_file',   label:'入力ファイル', type:'text',   default:'./input.mp4' },
+    { key:'volume_level', label:'音量倍率',    type:'number', default:'1.5', hint:'0.0〜10.0（1.0 が元の音量）' },
+    { key:'output_file',  label:'出力ファイル', type:'text',   default:'./output-volume.mp4' },
+  ]},
+  audio_extract: { label:'音声抽出', icon: '♫',  desc: '音声のみ取り出す',            fields: [
+    { key:'input_file',  label:'入力ファイル', type:'text',   default:'./input.mp4' },
+    { key:'output_file', label:'出力ファイル', type:'text',   default:'./output-audio.mp3' },
+  ]},
+  thumbnail:     { label:'静止画',   icon: '□',  desc: '指定時刻のフレームを切り出す', fields: [
+    { key:'input_file',  label:'入力ファイル', type:'text',   default:'./input.mp4' },
+    { key:'timestamp',   label:'時刻',        type:'text',   default:'00:00:05', hint:'HH:MM:SS または秒数' },
+    { key:'output_file', label:'出力ファイル', type:'text',   default:'./thumbnail.jpg' },
+  ]},
+  gif:           { label:'GIF',     icon: '⊞',  desc: 'アニメーション GIF に変換する', fields: [
+    { key:'input_file',  label:'入力ファイル', type:'text',   default:'./input.mp4' },
+    { key:'fps',         label:'FPS',         type:'number', default:'10', hint:'1〜60' },
+    { key:'width',       label:'幅 (px)',     type:'number', default:'480' },
+    { key:'output_file', label:'出力ファイル', type:'text',   default:'./output.gif' },
+  ]},
+  speed:         { label:'速度',     icon: '▷▷', desc: '再生速度を変える',            fields: [
+    { key:'input_file',  label:'入力ファイル', type:'text',   default:'./input.mp4' },
+    { key:'speed',       label:'速度倍率',    type:'number', default:'2.0', hint:'0.25〜4.0（1.0 が等速）' },
+    { key:'output_file', label:'出力ファイル', type:'text',   default:'./output-speed.mp4' },
+  ]},
+  mute:          { label:'ミュート',  icon: '⊘',  desc: '音声を削除する',              fields: [
+    { key:'input_file',  label:'入力ファイル', type:'text',   default:'./input.mp4' },
+    { key:'output_file', label:'出力ファイル', type:'text',   default:'./output-mute.mp4' },
+  ]},
+  convert:       { label:'変換',     icon: '⇄',  desc: 'フォーマットを変換する',       fields: [
+    { key:'input_file',  label:'入力ファイル', type:'text',   default:'./input.mov' },
+    { key:'output_file', label:'出力ファイル', type:'text',   default:'./output.mp4' },
+  ]},
+  rotate:        { label:'回転',     icon: '↻',  desc: '回転・反転する',               fields: [
+    { key:'input_file',  label:'入力ファイル', type:'text',   default:'./input.mp4' },
+    { key:'direction',   label:'方向',        type:'select', default:'right90', options:[
+      {value:'right90',label:'右 90°'},{value:'left90',label:'左 90°'},
+      {value:'rot180',label:'180°'},{value:'hflip',label:'左右反転'},{value:'vflip',label:'上下反転'},
+    ]},
+    { key:'output_file', label:'出力ファイル', type:'text',   default:'./output-rotate.mp4' },
+  ]},
+  info:          { label:'情報',     icon: 'ℹ',  desc: '動画の詳細情報を確認する',     fields: [
+    { key:'input_file',  label:'入力ファイル', type:'text',   default:'./input.mp4' },
+  ]},
+  crop:          { label:'クロップ', icon: '⬚',  desc: '画面を切り抜く',              fields: [
+    { key:'input_file',  label:'入力ファイル', type:'text',   default:'./input.mp4' },
+    { key:'width',       label:'幅 (px)',     type:'number', default:'640' },
+    { key:'height',      label:'高さ (px)',   type:'number', default:'360' },
+    { key:'x',           label:'X オフセット', type:'number', default:'0' },
+    { key:'y',           label:'Y オフセット', type:'number', default:'0' },
+    { key:'output_file', label:'出力ファイル', type:'text',   default:'./output-crop.mp4' },
+  ]},
+  compress:      { label:'圧縮',     icon: '◈',  desc: 'ファイルサイズを小さくする',   fields: [
+    { key:'input_file',  label:'入力ファイル', type:'text',   default:'./input.mp4' },
+    { key:'crf',         label:'CRF 値',      type:'number', default:'23', hint:'0〜51（小さいほど高品質）' },
+    { key:'output_file', label:'出力ファイル', type:'text',   default:'./output-compressed.mp4' },
+  ]},
+  fps:           { label:'FPS',     icon: '⊙',  desc: 'フレームレートを変換する',     fields: [
+    { key:'input_file',  label:'入力ファイル', type:'text',   default:'./input.mp4' },
+    { key:'fps',         label:'フレームレート', type:'number', default:'30', hint:'1〜120（小数対応）' },
+    { key:'output_file', label:'出力ファイル', type:'text',   default:'./output-fps.mp4' },
+  ]},
+};
+
+// ─── State ───
+let selectedOp = null;
+let currentSource = null;
+let isRunning = false;
+
+// ─── DOM Refs ───
+const opGrid    = document.getElementById('op-grid');
+const formPanel = document.getElementById('form-panel');
+const previewCode  = document.getElementById('preview-code');
+const previewStatus = document.getElementById('preview-status');
+const logOutput = document.getElementById('log-output');
+const progressBar = document.getElementById('progress-bar');
+const statusDot  = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+
+// ─── Render Op Grid ───
+function renderGrid() {
+  opGrid.innerHTML = '';
+  for (const [key, op] of Object.entries(OPS)) {
+    const card = document.createElement('div');
+    card.className = 'op-card';
+    card.dataset.op = key;
+    card.innerHTML = `<div class="op-icon">${op.icon}</div><div class="op-label">${op.label}</div>`;
+    card.addEventListener('click', () => selectOp(key));
+    opGrid.appendChild(card);
+  }
+}
+
+// ─── Select Operation ───
+function selectOp(key) {
+  if (isRunning) return;
+  selectedOp = key;
+  document.querySelectorAll('.op-card').forEach(c =>
+    c.classList.toggle('active', c.dataset.op === key));
+  renderForm(key);
+  updatePreview();
+}
+
+// ─── Render Form ───
+function renderForm(key) {
+  const op = OPS[key];
+  formPanel.innerHTML = '';
+
+  const header = document.createElement('div');
+  header.className = 'form-header';
+  header.innerHTML = `<div class="form-title">${op.label}</div><div class="form-desc">${op.desc}</div>`;
+  formPanel.appendChild(header);
+
+  op.fields.forEach(f => {
+    const grp = document.createElement('div');
+    grp.className = 'field-group';
+
+    const lbl = document.createElement('label');
+    lbl.className = 'field-label';
+    lbl.textContent = f.label;
+
+    let input;
+    if (f.type === 'select') {
+      input = document.createElement('select');
+      input.className = 'field-select';
+      f.options.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.label;
+        if (o.value === f.default) opt.selected = true;
+        input.appendChild(opt);
+      });
+    } else if (f.type === 'textarea') {
+      input = document.createElement('textarea');
+      input.className = 'field-textarea';
+      input.value = f.default;
+    } else {
+      input = document.createElement('input');
+      input.className = 'field-input';
+      input.type = f.type === 'number' ? 'text' : 'text';
+      input.value = f.default;
+    }
+    input.dataset.key = f.key;
+    input.addEventListener('input', () => updatePreview());
+
+    grp.appendChild(lbl);
+    grp.appendChild(input);
+
+    if (f.hint) {
+      const hint = document.createElement('div');
+      hint.className = 'field-hint';
+      hint.textContent = f.hint;
+      grp.appendChild(hint);
+    }
+    formPanel.appendChild(grp);
+  });
+
+  const btn = document.createElement('button');
+  btn.className = 'run-btn';
+  btn.id = 'run-btn';
+  btn.textContent = key === 'info' ? '情報を取得' : '実 行';
+  btn.addEventListener('click', () => runOperation(key));
+  formPanel.appendChild(btn);
+}
+
+// ─── Collect Params ───
+function collectParams() {
+  const params = {};
+  formPanel.querySelectorAll('[data-key]').forEach(el => {
+    params[el.dataset.key] = el.value;
+  });
+  return params;
+}
+
+// ─── Update Preview ───
+let previewTimer = null;
+function updatePreview() {
+  if (!selectedOp) return;
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(async () => {
+    const params = collectParams();
+    previewStatus.textContent = '更新中…';
+    try {
+      const res = await fetch('/api/preview', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({operation: selectedOp, params}),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        renderCommand(data.command);
+        previewStatus.textContent = '✓';
+      } else {
+        previewCode.textContent = `エラー: ${data.error}`;
+        previewStatus.textContent = '!';
+      }
+    } catch (e) {
+      previewCode.textContent = '接続エラー';
+      previewStatus.textContent = '!';
+    }
+  }, 300);
+}
+
+// ─── Syntax-Highlight Command ───
+function renderCommand(cmd) {
+  const parts = cmd.split(' ');
+  let html = '';
+  let i = 0;
+  while (i < parts.length) {
+    const p = parts[i];
+    if (i === 0) {
+      html += `<span class="cmd-prog">${esc(p)}</span> `;
+    } else if (p.startsWith('-')) {
+      html += `<span class="cmd-flag">${esc(p)}</span> `;
+    } else if (p.startsWith('./') || p.startsWith('/') || p.endsWith('.mp4') || p.endsWith('.mov') || p.endsWith('.webm') || p.endsWith('.gif') || p.endsWith('.jpg') || p.endsWith('.mp3')) {
+      html += `<span class="cmd-file">${esc(p)}</span> `;
+    } else {
+      html += `<span class="cmd-value">${esc(p)}</span> `;
+    }
+    i++;
+  }
+  previewCode.innerHTML = html.trimEnd();
+}
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ─── Run Operation ───
+function runOperation(key) {
+  if (isRunning) return;
+  isRunning = true;
+
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.textContent = '実行中…';
+  btn.classList.add('running');
+
+  logOutput.innerHTML = '';
+  setStatus('running', '実行中');
+  progressBar.className = 'progress-bar indeterminate';
+
+  if (currentSource) { currentSource.close(); }
+
+  const params = collectParams();
+  const body = JSON.stringify({operation: key, params});
+
+  // Use fetch + ReadableStream for SSE-like streaming
+  fetch('/api/run', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body,
+  }).then(res => {
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    function read() {
+      reader.read().then(({done, value}) => {
+        if (done) return;
+        buffer += decoder.decode(value, {stream: true});
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        lines.forEach(line => {
+          if (line.startsWith('data: ')) {
+            try {
+              const msg = JSON.parse(line.slice(6));
+              handleMessage(msg);
+            } catch(e) {}
+          }
+        });
+        read();
+      });
+    }
+    read();
+  }).catch(err => {
+    appendLog(`接続エラー: ${err}`, 'err');
+    finishRun(false);
+  });
+}
+
+function handleMessage(msg) {
+  if (msg.command) {
+    renderCommand(msg.command);
+  }
+  if (msg.log !== undefined) {
+    const cls = msg.error ? 'err' : (msg.log.includes('Error') || msg.log.includes('error') ? 'err' : 'info');
+    appendLog(msg.log, cls);
+  }
+  if (msg.done) {
+    const ok = msg.returncode === 0;
+    finishRun(ok);
+    if (ok) appendLog('✓ 完了', 'ok');
+    else appendLog(`✗ 終了コード: ${msg.returncode}`, 'err');
+  }
+}
+
+function appendLog(text, cls = 'info') {
+  const span = document.createElement('span');
+  span.className = `log-line ${cls}`;
+  span.textContent = text;
+  logOutput.appendChild(span);
+  logOutput.appendChild(document.createTextNode('\n'));
+  logOutput.scrollTop = logOutput.scrollHeight;
+}
+
+function finishRun(ok) {
+  isRunning = false;
+  const btn = document.getElementById('run-btn');
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = selectedOp === 'info' ? '情報を取得' : '実 行';
+    btn.classList.remove('running');
+  }
+  setStatus(ok ? 'success' : 'error', ok ? '完了' : 'エラー');
+  progressBar.className = 'progress-bar';
+  progressBar.style.width = '100%';
+  setTimeout(() => { progressBar.style.width = '0%'; }, 1500);
+}
+
+function setStatus(state, label) {
+  statusDot.className = `status-dot ${state}`;
+  statusText.textContent = label;
+  statusText.style.color = state === 'success' ? 'var(--green)'
+    : state === 'error' ? 'var(--red)'
+    : state === 'running' ? 'var(--gold)'
+    : 'var(--text-lo)';
+}
+
+// ─── Boot ───
+renderGrid();
+</script>
+</body>
+</html>
