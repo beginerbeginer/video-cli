@@ -1,12 +1,12 @@
 import unittest
 from unittest.mock import patch
 
+from usecases.flow_result import FlowResult
 from usecases.fps_flow import (
     FpsForm,
     execute_fps,
     run_fps_iteration,
 )
-from usecases.flow_result import FlowResult
 
 
 class TestExecuteFps(unittest.TestCase):
