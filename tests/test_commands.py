@@ -9,6 +9,7 @@ from ffmpeg.commands import (
     build_concat_reencode_command,
     build_convert_command,
     build_crop_command,
+    build_fps_command,
     build_gif_command,
     build_mute_command,
     build_resize_command,
@@ -438,6 +439,20 @@ class TestBuildCompressCommand(unittest.TestCase):
         command = build_compress_command("in.mp4", "out.mp4", crf=23)
         self.assertIn("in.mp4", command)
         self.assertIn("out.mp4", command)
+
+
+class TestBuildFpsCommand(unittest.TestCase):
+    def test_basic(self):
+        command = build_fps_command("in.mp4", "out.mp4", fps=30.0)
+        self.assertEqual(
+            command,
+            ["ffmpeg", "-y", "-i", "in.mp4", "-vf", "fps=30", "-c:a", "copy", "out.mp4"],
+        )
+
+    def test_decimal_fps(self):
+        command = build_fps_command("in.mp4", "out.mp4", fps=23.976)
+        vf_idx = command.index("-vf")
+        self.assertEqual(command[vf_idx + 1], "fps=23.976")
 
 
 if __name__ == "__main__":

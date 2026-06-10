@@ -8,6 +8,7 @@ from validation.value_validators import (
     validate_crop_offset,
     validate_dimension,
     validate_fps,
+    validate_fps_rate,
     validate_gif_width,
     validate_speed_multiplier,
     validate_timestamp_within_duration,
@@ -240,6 +241,32 @@ class TestValidateCrf(unittest.TestCase):
     def test_non_integer(self):
         with self.assertRaises(ValidationError):
             validate_crf("abc", "CRF")
+
+
+class TestValidateFpsRate(unittest.TestCase):
+    def test_valid_integer(self):
+        self.assertEqual(validate_fps_rate("30", "fps"), 30.0)
+
+    def test_valid_decimal(self):
+        self.assertAlmostEqual(validate_fps_rate("23.976", "fps"), 23.976)
+
+    def test_lower_bound(self):
+        self.assertEqual(validate_fps_rate("1", "fps"), 1.0)
+
+    def test_upper_bound(self):
+        self.assertEqual(validate_fps_rate("120", "fps"), 120.0)
+
+    def test_below_lower_bound(self):
+        with self.assertRaises(ValidationError):
+            validate_fps_rate("0", "fps")
+
+    def test_above_upper_bound(self):
+        with self.assertRaises(ValidationError):
+            validate_fps_rate("121", "fps")
+
+    def test_non_numeric(self):
+        with self.assertRaises(ValidationError):
+            validate_fps_rate("abc", "fps")
 
 
 if __name__ == "__main__":
