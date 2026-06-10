@@ -152,7 +152,7 @@ def validate_volume_level(raw: str, label: str) -> float:
     except ValueError as exc:
         raise ValidationError(f"{label} は数値で入力してください。") from exc
 
-    if value < 0.0 or value > 10.0:
+    if not math.isfinite(value) or value < 0.0 or value > 10.0:
         raise ValidationError(f"{label} は 0.0〜10.0 の範囲で入力してください。")
 
     return value
