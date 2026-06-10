@@ -3,7 +3,8 @@ from collections.abc import Callable
 from domain import operations
 from ffmpeg.probe import ensure_ffmpeg_installed, ensure_ffprobe_installed
 from shared.errors import FfmpegExecutionError, ValidationError
-from ui.main_menu import prompt_main_menu
+from ui.cli.cli_ui import CliUI
+from ui.cli.main_menu import prompt_main_menu
 from usecases.audio_extract_flow import run_audio_extract_flow
 from usecases.compress_flow import run_compress_flow
 from usecases.concat_flow import run_concat_flow
@@ -31,23 +32,23 @@ def show_unknown_operation() -> None:
     print("未対応の操作です。")
 
 
-def build_operation_handlers() -> dict[str, OperationHandler]:
+def build_operation_handlers(ui: CliUI) -> dict[str, OperationHandler]:
     return {
-        operations.TRIM: run_trim_flow,
-        operations.CONCAT: run_concat_flow,
-        operations.RESIZE: run_resize_flow,
-        operations.VOLUME: run_volume_flow,
-        operations.AUDIO_EXTRACT: run_audio_extract_flow,
-        operations.THUMBNAIL: run_thumbnail_flow,
-        operations.GIF: run_gif_flow,
-        operations.SPEED: run_speed_flow,
-        operations.MUTE: run_mute_flow,
-        operations.CONVERT: run_convert_flow,
-        operations.ROTATE: run_rotate_flow,
-        operations.INFO: run_info_flow,
-        operations.CROP: run_crop_flow,
-        operations.COMPRESS: run_compress_flow,
-        operations.FPS: run_fps_flow,
+        operations.TRIM: lambda: run_trim_flow(ui),
+        operations.CONCAT: lambda: run_concat_flow(ui),
+        operations.RESIZE: lambda: run_resize_flow(ui),
+        operations.VOLUME: lambda: run_volume_flow(ui),
+        operations.AUDIO_EXTRACT: lambda: run_audio_extract_flow(ui),
+        operations.THUMBNAIL: lambda: run_thumbnail_flow(ui),
+        operations.GIF: lambda: run_gif_flow(ui),
+        operations.SPEED: lambda: run_speed_flow(ui),
+        operations.MUTE: lambda: run_mute_flow(ui),
+        operations.CONVERT: lambda: run_convert_flow(ui),
+        operations.ROTATE: lambda: run_rotate_flow(ui),
+        operations.INFO: lambda: run_info_flow(ui),
+        operations.CROP: lambda: run_crop_flow(ui),
+        operations.COMPRESS: lambda: run_compress_flow(ui),
+        operations.FPS: lambda: run_fps_flow(ui),
         operations.EXIT: exit_program,
     }
 
@@ -66,7 +67,8 @@ def main() -> None:
         ensure_ffmpeg_installed()
         ensure_ffprobe_installed()
 
-        handlers = build_operation_handlers()
+        ui = CliUI()
+        handlers = build_operation_handlers(ui)
 
         while True:
             operation = prompt_main_menu()

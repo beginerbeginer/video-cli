@@ -3,16 +3,15 @@ from dataclasses import dataclass, replace
 from ffmpeg.commands import build_speed_command
 from ffmpeg.probe import probe_media_info
 from shared.formatters import format_media_info_summary
-from ui.prompts import ask_text, require_non_empty
-from ui.review import ask_field_to_edit
 from usecases.flow_result import FlowResult
 from usecases.shared_flow import execute_with_output, handle_generic_review, run_flow, run_generic_iteration
+from usecases.ui_port import UIPort
 from validation.file_validators import (
     validate_input_file_exists,
     validate_output_directory_exists,
     validate_video_file_extension,
 )
-from validation.value_validators import validate_speed_multiplier
+from validation.value_validators import require_non_empty, validate_speed_multiplier
 
 
 @dataclass
@@ -22,38 +21,11 @@ class SpeedForm:
     output_file: str = "./output-speed.mp4"
 
 
-def ask_speed_input_file(default_value: str) -> str:
-    return require_non_empty(
-        ask_text(
-            "対象の動画ファイルを入力してください\n例: ./input/video.mp4",
-            default=default_value,
-        ),
+def collect_speed_input(form: SpeedForm, ui: UIPort):
+    input_file = require_non_empty(
+        ui.ask_text("対象の動画ファイルを入力してください\n例: ./input/video.mp4", default=form.input_file),
         "入力ファイル",
     )
-
-
-def ask_speed_multiplier(default_value: str) -> str:
-    return require_non_empty(
-        ask_text(
-            "速度倍率を入力してください\n数値: 0.25〜4.0（1.0=通常、2.0=2倍速、0.5=スロー）\n例: 2.0",
-            default=default_value,
-        ),
-        "速度倍率",
-    )
-
-
-def ask_speed_output(default_value: str) -> str:
-    return require_non_empty(
-        ask_text(
-            "出力ファイル名を入力してください\n例: ./output/fast.mp4",
-            default=default_value,
-        ),
-        "出力ファイル",
-    )
-
-
-def collect_speed_input(form: SpeedForm):
-    input_file = ask_speed_input_file(form.input_file)
     validate_input_file_exists(input_file)
     validate_video_file_extension(input_file)
 
@@ -62,10 +34,19 @@ def collect_speed_input(form: SpeedForm):
     print(format_media_info_summary(media_info))
     print()
 
-    speed_raw = ask_speed_multiplier(form.speed_raw)
+    speed_raw = require_non_empty(
+        ui.ask_text(
+            "速度倍率を入力してください\n数値: 0.25〜4.0（1.0=通常、2.0=2倍速、0.5=スロー）\n例: 2.0",
+            default=form.speed_raw,
+        ),
+        "速度倍率",
+    )
     validate_speed_multiplier(speed_raw, "速度倍率")
 
-    output_file = ask_speed_output(form.output_file)
+    output_file = require_non_empty(
+        ui.ask_text("出力ファイル名を入力してください\n例: ./output/fast.mp4", default=form.output_file),
+        "出力ファイル",
+    )
     validate_output_directory_exists(output_file)
 
     return replace(form, input_file=input_file, speed_raw=speed_raw, output_file=output_file), media_info
@@ -93,13 +74,14 @@ def build_speed_summary(form: SpeedForm, media_info) -> str:
     )
 
 
-def edit_speed_form(form: SpeedForm) -> SpeedForm:
-    field = ask_field_to_edit(
+def edit_speed_form(form: SpeedForm, ui: UIPort) -> SpeedForm:
+    field = ui.ask_menu(
+        "修正したい項目を選んでください",
         [
             ("入力ファイル", "input_file"),
             ("速度倍率", "speed_raw"),
             ("出力ファイル", "output_file"),
-        ]
+        ],
     )
 
     prompts = {
@@ -108,12 +90,12 @@ def edit_speed_form(form: SpeedForm) -> SpeedForm:
         "output_file": ("出力ファイルを再入力してください", "出力ファイル"),
     }
     prompt, label = prompts[field]
-    value = require_non_empty(ask_text(prompt, default=getattr(form, field)), label)
+    value = require_non_empty(ui.ask_text(prompt, default=getattr(form, field)), label)
     return replace(form, **{field: value})
 
 
-def handle_speed_review(form: SpeedForm) -> FlowResult:
-    return handle_generic_review(form, SpeedForm, edit_speed_form)
+def handle_speed_review(form: SpeedForm, ui: UIPort) -> FlowResult:
+    return handle_generic_review(form, SpeedForm, lambda f: edit_speed_form(f, ui), ui)
 
 
 def execute_speed(form: SpeedForm, dry_run: bool = False) -> None:
@@ -128,7 +110,7 @@ def execute_speed(form: SpeedForm, dry_run: bool = False) -> None:
     execute_with_output(command, form.output_file, dry_run)
 
 
-def run_speed_iteration(form: SpeedForm) -> FlowResult:
+def run_speed_iteration(form: SpeedForm, ui: UIPort) -> FlowResult:
     return run_generic_iteration(
         form,
         collect_speed_input,
@@ -136,8 +118,9 @@ def run_speed_iteration(form: SpeedForm) -> FlowResult:
         SpeedForm,
         edit_speed_form,
         execute_speed,
+        ui,
     )
 
 
-def run_speed_flow() -> None:
-    run_flow(SpeedForm(), run_speed_iteration)
+def run_speed_flow(ui: UIPort) -> None:
+    run_flow(SpeedForm(), run_speed_iteration, ui)

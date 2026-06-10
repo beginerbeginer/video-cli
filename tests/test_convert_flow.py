@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from usecases.convert_flow import (
     ConvertForm,
@@ -11,40 +11,46 @@ from usecases.flow_result import FlowResult
 
 
 class TestHandleConvertReview(unittest.TestCase):
-    @patch("usecases.shared_flow.ask_review_action", return_value="cancel")
-    def test_cancel(self, _mock_action):
+    def test_cancel(self):
         form = ConvertForm()
-        result = handle_convert_review(form)
+        ui = Mock()
+        ui.ask_menu.return_value = "cancel"
+        result = handle_convert_review(form, ui)
         self.assertEqual(result.kind, "done")
 
-    @patch("usecases.shared_flow.ask_review_action", return_value="restart")
-    def test_restart(self, _mock_action):
+    def test_restart(self):
         form = ConvertForm(input_file="in.mov", output_file="out.mp4")
-        result = handle_convert_review(form)
+        ui = Mock()
+        ui.ask_menu.return_value = "restart"
+        result = handle_convert_review(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, ConvertForm())
 
-    @patch("usecases.shared_flow.ask_review_action", return_value="execute")
-    def test_execute(self, _mock_action):
+    def test_execute(self):
         form = ConvertForm(input_file="in.mov", output_file="out.mp4")
-        result = handle_convert_review(form)
+        ui = Mock()
+        ui.ask_menu.return_value = "execute"
+        result = handle_convert_review(form, ui)
         self.assertEqual(result.kind, "execute")
 
-    @patch("usecases.shared_flow.ask_review_action", return_value="dry_run")
-    def test_dry_run(self, _mock_action):
+    def test_dry_run(self):
         form = ConvertForm(input_file="in.mov", output_file="out.mp4")
-        result = handle_convert_review(form)
+        ui = Mock()
+        ui.ask_menu.return_value = "dry_run"
+        result = handle_convert_review(form, ui)
         self.assertEqual(result.kind, "dry_run")
 
-    @patch("usecases.shared_flow.ask_review_action", return_value="edit")
     @patch("usecases.convert_flow.edit_convert_form")
-    def test_edit(self, mock_edit, _mock_action):
+    def test_edit(self, mock_edit):
         form = ConvertForm(input_file="in.mov", output_file="out.mp4")
         edited = ConvertForm(input_file="in.mov", output_file="out.mkv")
         mock_edit.return_value = edited
-        result = handle_convert_review(form)
+        ui = Mock()
+        ui.ask_menu.return_value = "edit"
+        result = handle_convert_review(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, edited)
+        mock_edit.assert_called_once_with(form, ui)
 
 
 class TestExecuteConvert(unittest.TestCase):
@@ -77,7 +83,8 @@ class TestRunConvertIteration(unittest.TestCase):
         mock_collect.return_value = (updated, object())
         mock_summary.return_value = "summary"
         mock_review.return_value = FlowResult(kind="execute", form=updated)
-        result = run_convert_iteration(form)
+        ui = Mock()
+        result = run_convert_iteration(form, ui)
         self.assertEqual(result.kind, "done")
         mock_execute.assert_called_once_with(updated, dry_run=False)
 
@@ -87,7 +94,8 @@ class TestRunConvertIteration(unittest.TestCase):
 
         form = ConvertForm(input_file="in.mov", output_file="out.mp4")
         mock_collect.side_effect = ValidationError("bad")
-        result = run_convert_iteration(form)
+        ui = Mock()
+        result = run_convert_iteration(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, form)
 
