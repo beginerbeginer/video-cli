@@ -5,6 +5,7 @@ from ffmpeg.probe import ensure_ffmpeg_installed, ensure_ffprobe_installed
 from shared.errors import FfmpegExecutionError, ValidationError
 from ui.cli.cli_ui import CliUI
 from ui.cli.main_menu import prompt_main_menu
+from usecases.ui_port import UIPort
 from usecases.audio_extract_flow import run_audio_extract_flow
 from usecases.compress_flow import run_compress_flow
 from usecases.concat_flow import run_concat_flow
@@ -32,7 +33,7 @@ def show_unknown_operation() -> None:
     print("未対応の操作です。")
 
 
-def build_operation_handlers(ui: CliUI) -> dict[str, OperationHandler]:
+def build_operation_handlers(ui: UIPort) -> dict[str, OperationHandler]:
     return {
         operations.TRIM: lambda: run_trim_flow(ui),
         operations.CONCAT: lambda: run_concat_flow(ui),
