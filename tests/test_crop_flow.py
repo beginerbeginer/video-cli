@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from usecases.crop_flow import (
     CropForm,
@@ -62,7 +62,7 @@ class TestExecuteCrop(unittest.TestCase):
         mock_build.return_value = ["ffmpeg", "..."]
         execute_crop(form)
         mock_build.assert_called_once_with(input_file="in.mp4", output_file="out.mp4", width=640, height=360, x=0, y=0)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.crop_flow.build_crop_command")
@@ -70,7 +70,7 @@ class TestExecuteCrop(unittest.TestCase):
         form = CropForm(input_file="in.mp4", width=640, height=360, x=0, y=0, output_file="out.mp4")
         mock_build.return_value = ["ffmpeg", "..."]
         execute_crop(form, dry_run=True)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True, progress_callback=ANY)
 
 
 class TestRunCropIteration(unittest.TestCase):

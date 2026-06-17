@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from usecases.flow_result import FlowResult
 from usecases.fps_flow import (
@@ -24,7 +24,7 @@ class TestExecuteFps(unittest.TestCase):
             output_file="out.mp4",
             fps=30.0,
         )
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.fps_flow.build_fps_command")
@@ -35,7 +35,7 @@ class TestExecuteFps(unittest.TestCase):
 
         execute_fps(form, dry_run=True)
 
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True, progress_callback=ANY)
 
 
 class TestRunFpsIteration(unittest.TestCase):

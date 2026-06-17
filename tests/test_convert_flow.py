@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from usecases.convert_flow import (
     ConvertForm,
@@ -61,7 +61,7 @@ class TestExecuteConvert(unittest.TestCase):
         mock_build.return_value = ["ffmpeg", "..."]
         execute_convert(form)
         mock_build.assert_called_once_with(input_file="in.mov", output_file="out.mp4")
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.convert_flow.build_convert_command")
@@ -69,7 +69,7 @@ class TestExecuteConvert(unittest.TestCase):
         form = ConvertForm(input_file="in.mov", output_file="out.mp4")
         mock_build.return_value = ["ffmpeg", "..."]
         execute_convert(form, dry_run=True)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True, progress_callback=ANY)
 
 
 class TestRunConvertIteration(unittest.TestCase):

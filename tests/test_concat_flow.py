@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import ANY, MagicMock, Mock, patch
 
 from usecases.concat_flow import (
     ConcatForm,
@@ -41,7 +41,7 @@ class TestExecuteConcat(unittest.TestCase):
         mock_create_concat_list_file.assert_called_once_with(["a.mp4", "b.mp4"])
         mock_choose_concat_strategy.assert_called_once_with(True)
         strategy.build.assert_called_once_with("/tmp/list.txt", "out.mp4")
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.concat_flow.choose_concat_strategy")
@@ -74,7 +74,7 @@ class TestExecuteConcat(unittest.TestCase):
         mock_create_concat_list_file.assert_called_once_with(["a.mp4", "b.mp4"])
         mock_choose_concat_strategy.assert_called_once_with(True)
         strategy.build.assert_called_once_with("/tmp/list.txt", "out.mp4")
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.concat_flow.choose_concat_strategy")

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from usecases.flow_result import FlowResult
 from usecases.speed_flow import (
@@ -64,7 +64,7 @@ class TestExecuteSpeed(unittest.TestCase):
         mock_build.return_value = ["ffmpeg", "..."]
         execute_speed(form)
         mock_build.assert_called_once_with(input_file="in.mp4", output_file="out.mp4", speed=2.0)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.speed_flow.build_speed_command")
@@ -72,7 +72,7 @@ class TestExecuteSpeed(unittest.TestCase):
         form = SpeedForm(input_file="in.mp4", speed_raw="2.0", output_file="out.mp4")
         mock_build.return_value = ["ffmpeg", "..."]
         execute_speed(form, dry_run=True)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True, progress_callback=ANY)
 
 
 class TestRunSpeedIteration(unittest.TestCase):

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from usecases.audio_extract_flow import (
     AudioExtractForm,
@@ -64,7 +64,7 @@ class TestExecuteAudioExtract(unittest.TestCase):
         mock_build.return_value = ["ffmpeg", "..."]
         execute_audio_extract(form)
         mock_build.assert_called_once_with(input_file="in.mp4", output_file="out.mp3")
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.audio_extract_flow.build_audio_extract_command")
@@ -72,7 +72,7 @@ class TestExecuteAudioExtract(unittest.TestCase):
         form = AudioExtractForm(input_file="in.mp4", output_file="out.mp3")
         mock_build.return_value = ["ffmpeg", "..."]
         execute_audio_extract(form, dry_run=True)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True, progress_callback=ANY)
 
 
 class TestRunAudioExtractIteration(unittest.TestCase):

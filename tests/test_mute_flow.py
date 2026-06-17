@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from usecases.flow_result import FlowResult
 from usecases.mute_flow import (
@@ -64,7 +64,7 @@ class TestExecuteMute(unittest.TestCase):
         mock_build.return_value = ["ffmpeg", "..."]
         execute_mute(form)
         mock_build.assert_called_once_with(input_file="in.mp4", output_file="out.mp4")
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.mute_flow.build_mute_command")
@@ -72,7 +72,7 @@ class TestExecuteMute(unittest.TestCase):
         form = MuteForm(input_file="in.mp4", output_file="out.mp4")
         mock_build.return_value = ["ffmpeg", "..."]
         execute_mute(form, dry_run=True)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True, progress_callback=ANY)
 
 
 class TestRunMuteIteration(unittest.TestCase):

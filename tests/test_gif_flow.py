@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from usecases.flow_result import FlowResult
 from usecases.gif_flow import (
@@ -64,7 +64,7 @@ class TestExecuteGif(unittest.TestCase):
         mock_build.return_value = ["ffmpeg", "..."]
         execute_gif(form)
         mock_build.assert_called_once_with(input_file="in.mp4", output_file="out.gif", fps=10, width=480)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.gif_flow.build_gif_command")
@@ -72,7 +72,7 @@ class TestExecuteGif(unittest.TestCase):
         form = GifForm(input_file="in.mp4", fps_raw="10", width_raw="480", output_file="out.gif")
         mock_build.return_value = ["ffmpeg", "..."]
         execute_gif(form, dry_run=True)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True, progress_callback=ANY)
 
 
 class TestRunGifIteration(unittest.TestCase):

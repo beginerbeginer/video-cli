@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from usecases.flow_result import FlowResult
 from usecases.thumbnail_flow import (
@@ -64,7 +64,7 @@ class TestExecuteThumbnail(unittest.TestCase):
         mock_build.return_value = ["ffmpeg", "..."]
         execute_thumbnail(form)
         mock_build.assert_called_once_with(input_file="in.mp4", output_file="out.jpg", timestamp_seconds=10)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.thumbnail_flow.build_thumbnail_command")
@@ -72,7 +72,7 @@ class TestExecuteThumbnail(unittest.TestCase):
         form = ThumbnailForm(input_file="in.mp4", timestamp_raw="10", output_file="out.jpg")
         mock_build.return_value = ["ffmpeg", "..."]
         execute_thumbnail(form, dry_run=True)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True, progress_callback=ANY)
 
 
 class TestRunThumbnailIteration(unittest.TestCase):

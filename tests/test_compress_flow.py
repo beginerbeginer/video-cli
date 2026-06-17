@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from usecases.compress_flow import (
     CompressForm,
@@ -24,7 +24,7 @@ class TestExecuteCompress(unittest.TestCase):
             output_file="out.mp4",
             crf=23,
         )
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.compress_flow.build_compress_command")
@@ -35,7 +35,7 @@ class TestExecuteCompress(unittest.TestCase):
 
         execute_compress(form, dry_run=True)
 
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True, progress_callback=ANY)
 
 
 class TestRunCompressIteration(unittest.TestCase):

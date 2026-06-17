@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from usecases.flow_result import FlowResult
 from usecases.trim_flow import (
@@ -68,7 +68,7 @@ class TestExecuteTrim(unittest.TestCase):
         self.assertEqual(args["output_file"], "out.mp4")
         self.assertEqual(args["trim_range"].start_seconds, 10)
         self.assertEqual(args["trim_range"].end_seconds, 20)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.trim_flow.build_trim_command")
@@ -76,7 +76,7 @@ class TestExecuteTrim(unittest.TestCase):
         form = TrimForm(input_file="in.mp4", start_raw="10", end_raw="20", output_file="out.mp4")
         mock_build_command.return_value = ["ffmpeg", "..."]
         execute_trim(form, dry_run=True)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True, progress_callback=ANY)
 
 
 class TestRunTrimIteration(unittest.TestCase):

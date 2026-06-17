@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from usecases.flow_result import FlowResult
 from usecases.volume_flow import (
@@ -64,7 +64,7 @@ class TestExecuteVolume(unittest.TestCase):
         mock_build_volume_command.return_value = ["ffmpeg", "..."]
         execute_volume(form)
         mock_build_volume_command.assert_called_once_with(input_file="in.mp4", output_file="out.mp4", volume_level=1.5)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.volume_flow.build_volume_command")
@@ -72,7 +72,7 @@ class TestExecuteVolume(unittest.TestCase):
         form = VolumeForm(input_file="in.mp4", volume_raw="1.5", output_file="out.mp4")
         mock_build_volume_command.return_value = ["ffmpeg", "..."]
         execute_volume(form, dry_run=True)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True, progress_callback=ANY)
 
 
 class TestRunVolumeIteration(unittest.TestCase):
