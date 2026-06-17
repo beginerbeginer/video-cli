@@ -1,6 +1,8 @@
-from typing import Any, Callable
+import sys
+from collections.abc import Callable
+from typing import Any
 
-from ffmpeg.runner import run_ffmpeg
+from ffmpeg.runner import ProgressInfo, run_ffmpeg
 from shared.command_formatter import format_command
 from shared.errors import ValidationError
 from usecases.flow_result import FLOW_RESULT_FACTORIES, FlowResult
@@ -18,14 +20,26 @@ _REVIEW_CHOICES = [
 ]
 
 
+def make_cli_progress_callback() -> Callable[[ProgressInfo], None]:
+    # print ではなく sys.stdout.write + flush を使う。
+    # print は改行を付加するため \r による行上書きができないため。
+    def callback(info: ProgressInfo) -> None:
+        sys.stdout.write(f"\r経過時間: {info.out_time}  速度: {info.speed}    ")
+        sys.stdout.flush()
+
+    return callback
+
+
 def execute_with_output(command: list[str], output_file: str, dry_run: bool) -> None:
     print("生成された FFmpeg コマンド:")
     print(format_command(command))
     print()
 
-    result = run_ffmpeg(command, dry_run=dry_run)
+    result = run_ffmpeg(command, dry_run=dry_run, progress_callback=make_cli_progress_callback())
 
     if result.executed:
+        # プログレスバーの \r 行の後に改行してから完了メッセージを出す
+        print()
         print(f"完了: {output_file}")
     else:
         print("ドライラン完了: 実行はしていません。")

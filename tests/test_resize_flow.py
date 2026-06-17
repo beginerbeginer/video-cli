@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from usecases.flow_result import FlowResult
 from usecases.resize_flow import (
@@ -66,7 +66,7 @@ class TestExecuteResize(unittest.TestCase):
         mock_build_resize_command.assert_called_once_with(
             input_file="in.mp4", output_file="out.mp4", width=1280, height=720
         )
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.resize_flow.build_resize_command")
@@ -74,7 +74,7 @@ class TestExecuteResize(unittest.TestCase):
         form = ResizeForm(input_file="in.mp4", width_raw="1280", height_raw="720", output_file="out.mp4")
         mock_build_resize_command.return_value = ["ffmpeg", "..."]
         execute_resize(form, dry_run=True)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True, progress_callback=ANY)
 
 
 class TestRunResizeIteration(unittest.TestCase):

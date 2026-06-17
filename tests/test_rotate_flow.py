@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from usecases.flow_result import FlowResult
 from usecases.rotate_flow import (
@@ -61,7 +61,7 @@ class TestExecuteRotate(unittest.TestCase):
         mock_build.return_value = ["ffmpeg", "..."]
         execute_rotate(form)
         mock_build.assert_called_once_with(input_file="in.mp4", output_file="out.mp4", direction="right90")
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=False, progress_callback=ANY)
 
     @patch("usecases.shared_flow.run_ffmpeg")
     @patch("usecases.rotate_flow.build_rotate_command")
@@ -69,7 +69,7 @@ class TestExecuteRotate(unittest.TestCase):
         form = RotateForm(input_file="in.mp4", direction="hflip", output_file="out.mp4")
         mock_build.return_value = ["ffmpeg", "..."]
         execute_rotate(form, dry_run=True)
-        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True)
+        mock_run_ffmpeg.assert_called_once_with(["ffmpeg", "..."], dry_run=True, progress_callback=ANY)
 
 
 class TestRunRotateIteration(unittest.TestCase):
