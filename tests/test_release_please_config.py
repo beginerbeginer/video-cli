@@ -8,6 +8,8 @@ from pathlib import Path
 from scripts.conventional_commits import ALLOWED_TYPES
 
 ROOT = Path(__file__).resolve().parent.parent
+WORKFLOWS_DIR = ROOT / ".github" / "workflows"
+RELEASE_WORKFLOW = WORKFLOWS_DIR / "release-please.yml"
 
 
 def load_json(name: str) -> dict:
@@ -58,6 +60,60 @@ class TestReleasePleaseConfig(unittest.TestCase):
         types = {s["type"] for s in self.config["changelog-sections"]}
 
         self.assertEqual(types, set(ALLOWED_TYPES))
+
+
+
+def _on_block(text: str) -> str:
+    # Why not PyYAML: 標準ライブラリだけで済ませる方針のため。トップレベルの on: の中身だけ切り出せれば足りる
+    match = re.search(r"^on:\n((?:[ #].*\n|\n)*)", text, re.MULTILINE)
+    return match.group(1)
+
+
+def _runs_on_pull_request(text: str) -> bool:
+    return re.search(r"^  pull_request(_target)?:", _on_block(text), re.MULTILINE) is not None
+
+
+class TestReleasePleaseWorkflow(unittest.TestCase):
+    """リリース用の PR で CI が動くよう専用のトークンを使い、そのトークンが PR に渡らないことを固定する。"""
+
+    def setUp(self):
+        self.text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        self.workflows = {p.name: p.read_text(encoding="utf-8") for p in sorted(WORKFLOWS_DIR.glob("*.yml"))}
+
+    def test_専用のトークンを使い無ければGITHUB_TOKENに戻る(self):
+        # Why not secrets.RELEASE_PLEASE_TOKEN だけ: Secret が未登録だと空になり、release-please が動かなくなる
+        tokens = re.findall(r"^\s+token:\s*(.+)$", self.text, re.MULTILINE)
+
+        self.assertEqual(tokens, ["${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}"])
+
+    def test_mainへのpushと手動実行でだけ動く(self):
+        on = _on_block(self.text)
+
+        self.assertRegex(on, r"(?m)^  push:\n    branches: \[main\]$")
+        self.assertRegex(on, r"(?m)^  workflow_dispatch:")
+        self.assertFalse(_runs_on_pull_request(self.text))
+
+    def test_GITHUB_TOKENの権限は今のまま必要な分だけ(self):
+        permissions = re.search(r"^permissions:\n((?:  .*\n)+)", self.text, re.MULTILINE).group(1)
+
+        self.assertEqual(
+            permissions.split(),
+            ["contents:", "write", "issues:", "write", "pull-requests:", "write"],
+        )
+
+    def test_専用のトークンはrelease_pleaseのワークフローでだけ使う(self):
+        users = [name for name, text in self.workflows.items() if "RELEASE_PLEASE_TOKEN" in text]
+
+        self.assertEqual(users, ["release-please.yml"])
+
+    def test_PRで動くワークフローにはSecretを渡さない(self):
+        # Why not RELEASE_PLEASE_TOKEN だけを見る: 外部からの PR でほかの Secret が読まれるのも防ぎたい
+        on_pr = {name: text for name, text in self.workflows.items() if _runs_on_pull_request(text)}
+
+        self.assertIn("test.yml", on_pr)
+        for name, text in on_pr.items():
+            with self.subTest(workflow=name):
+                self.assertNotIn("secrets.", text)
 
 
 if __name__ == "__main__":
