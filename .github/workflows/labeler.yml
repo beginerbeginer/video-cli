@@ -1,0 +1,19 @@
+name: labeler
+
+on:
+  # Why not pull_request_target: 設定ファイルを main から読むため、labeler.yml を変える PR ではその変更を試せない。
+  # このリポジトリの PR は同じリポジトリのブランチから出すので、pull_request でも書き込める。
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      # sync-labels は既定で false。手で付けた `領域:*` を、パスに合わないからと外さないため
+      - uses: actions/labeler@v5
