@@ -16,6 +16,16 @@ def load_json(name: str) -> dict:
     return json.loads((ROOT / name).read_text(encoding="utf-8"))
 
 
+def _on_block(text: str) -> str:
+    # Why not PyYAML: 標準ライブラリだけで済ませる方針のため。トップレベルの on: の中身だけ切り出せれば足りる
+    match = re.search(r"^on:\n((?:[ #].*\n|\n)*)", text, re.MULTILINE)
+    return match.group(1)
+
+
+def _runs_on_pull_request(text: str) -> bool:
+    return re.search(r"^  pull_request(_target)?:", _on_block(text), re.MULTILINE) is not None
+
+
 class TestReleasePleaseConfig(unittest.TestCase):
     def setUp(self):
         self.config = load_json("release-please-config.json")
@@ -60,17 +70,6 @@ class TestReleasePleaseConfig(unittest.TestCase):
         types = {s["type"] for s in self.config["changelog-sections"]}
 
         self.assertEqual(types, set(ALLOWED_TYPES))
-
-
-
-def _on_block(text: str) -> str:
-    # Why not PyYAML: 標準ライブラリだけで済ませる方針のため。トップレベルの on: の中身だけ切り出せれば足りる
-    match = re.search(r"^on:\n((?:[ #].*\n|\n)*)", text, re.MULTILINE)
-    return match.group(1)
-
-
-def _runs_on_pull_request(text: str) -> bool:
-    return re.search(r"^  pull_request(_target)?:", _on_block(text), re.MULTILINE) is not None
 
 
 class TestReleasePleaseWorkflow(unittest.TestCase):
