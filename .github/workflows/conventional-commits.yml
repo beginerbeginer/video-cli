@@ -36,5 +36,5 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: git log -z --no-merges --format=%B "$BASE_SHA..$HEAD_SHA" > "$RUNNER_TEMP/commits.log"
-      - name: コミットの 1 行目を確かめる（違っても警告だけ）
+      - name: コミットの 1 行目と Claude-Session トレーラーを確かめる（違っても警告だけ）
         run: python3 scripts/conventional_commits.py commits "$RUNNER_TEMP/commits.log"

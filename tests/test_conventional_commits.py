@@ -4,7 +4,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from scripts.conventional_commits import check_commits, check_header, main
+from scripts.conventional_commits import check_commits, check_header, find_session_trailers, main
 
 
 class TestCheckHeader(unittest.TestCase):
@@ -107,6 +107,41 @@ class TestMain(unittest.TestCase):
 
         self.assertEqual(code, 0)
         self.assertNotIn("::warning", out)
+
+
+SESSION_COMMIT = "ci: 何かを変える\n\n理由。\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_xxx\n"
+
+
+class TestFindSessionTrailers(unittest.TestCase):
+    def test_ClaudeSessionトレーラーのあるコミットの1行目を返す(self):
+        log = "\0".join([SESSION_COMMIT, "fix: b\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n", ""])
+
+        self.assertEqual(find_session_trailers(log), ["ci: 何かを変える"])
+
+    def test_大文字小文字が違ってもトレーラーとみなす(self):
+        log = "docs: a\n\nclaude-session: https://claude.ai/code/session_xxx\n\0"
+
+        self.assertEqual(find_session_trailers(log), ["docs: a"])
+
+    def test_本文で触れただけなら対象外(self):
+        log = "docs: a\n\n`Claude-Session:` のトレーラーを付けない。\n\0"
+
+        self.assertEqual(find_session_trailers(log), [])
+
+
+class TestMainSessionTrailer(unittest.TestCase):
+    def test_ClaudeSessionトレーラーがあっても終了コード0で警告注釈を出す(self):
+        with TemporaryDirectory() as tmp:
+            log = Path(tmp) / "commits.log"
+            log.write_text(SESSION_COMMIT + "\0", encoding="utf-8")
+            out = io.StringIO()
+            with redirect_stdout(out):
+                code = main(["commits", str(log)])
+
+        self.assertEqual(code, 0)
+        self.assertIn("::warning", out.getvalue())
+        self.assertIn("Claude-Session", out.getvalue())
+        self.assertNotIn("コミットメッセージ OK", out.getvalue())
 
 
 if __name__ == "__main__":
