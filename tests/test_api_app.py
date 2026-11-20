@@ -16,30 +16,43 @@ class TestHealth(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(create_app())
 
-    def test_reports_both_tools_available(self):
+    def test_ffmpegとffprobeがあると両方trueが返る(self):
+        # Arrange
         with patch("ffmpeg.probe.shutil.which", side_effect=_which_only("ffmpeg", "ffprobe")):
+            # Act
             res = self.client.get("/api/health")
 
+        # Assert
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json(), {"ffmpeg": True, "ffprobe": True})
 
-    def test_reports_missing_ffprobe(self):
+    def test_ffprobeが無いとffprobeだけfalseが返る(self):
+        # Arrange
         with patch("ffmpeg.probe.shutil.which", side_effect=_which_only("ffmpeg")):
+            # Act
             res = self.client.get("/api/health")
 
+        # Assert
         self.assertEqual(res.json(), {"ffmpeg": True, "ffprobe": False})
 
 
 class TestOperations(unittest.TestCase):
-    def test_lists_operations_in_menu_order_without_exit(self):
-        res = TestClient(create_app()).get("/api/operations")
+    def test_操作一覧はメニュー順でexitを除いて返る(self):
+        # Arrange
+        client = TestClient(create_app())
+        expected = [
+            {"id": operation, "label": label}
+            for operation, label in operations.OPERATION_LABELS.items()
+            if operation != operations.EXIT
+        ]
 
+        # Act
+        res = client.get("/api/operations")
+
+        # Assert
         self.assertEqual(res.status_code, 200)
-        body = res.json()
-        self.assertEqual(body[0], {"id": operations.TRIM, "label": "動画を切り出す"})
-        self.assertEqual(body[-1], {"id": operations.FPS, "label": "フレームレートを変換する"})
-        self.assertEqual(len(body), 15)
-        self.assertNotIn(operations.EXIT, [item["id"] for item in body])
+        self.assertEqual(res.json(), expected)
+        self.assertEqual(res.json()[0], {"id": operations.TRIM, "label": "動画を切り出す"})
 
 
 class TestValidationErrorHandler(unittest.TestCase):
@@ -52,21 +65,30 @@ class TestValidationErrorHandler(unittest.TestCase):
 
         return TestClient(app)
 
-    def test_returns_422_with_field(self):
+    def test_fieldつきのValidationErrorは422とerrorsで返る(self):
+        # Arrange
         exc = ValidationError("開始時刻の形式が正しくありません。")
         exc.field = "start_raw"
+        client = self._client_raising(exc)
 
-        res = self._client_raising(exc).get("/api/_raise")
+        # Act
+        res = client.get("/api/_raise")
 
+        # Assert
         self.assertEqual(res.status_code, 422)
         self.assertEqual(
             res.json(),
             {"errors": [{"field": "start_raw", "message": "開始時刻の形式が正しくありません。"}]},
         )
 
-    def test_field_is_null_when_not_set(self):
-        res = self._client_raising(ValidationError("ffmpeg が見つかりません。")).get("/api/_raise")
+    def test_fieldが無いValidationErrorはfieldがnullで返る(self):
+        # Arrange
+        client = self._client_raising(ValidationError("ffmpeg が見つかりません。"))
 
+        # Act
+        res = client.get("/api/_raise")
+
+        # Assert
         self.assertEqual(res.status_code, 422)
         self.assertEqual(res.json(), {"errors": [{"field": None, "message": "ffmpeg が見つかりません。"}]})
 
@@ -81,47 +103,56 @@ class TestCors(unittest.TestCase):
             headers={"Origin": origin, "Access-Control-Request-Method": "GET"},
         )
 
-    def test_allows_vite_dev_server(self):
+    def test_Viteのdevサーバーからのリクエストは許可される(self):
+        # Act
         res = self._preflight("http://localhost:5173")
 
+        # Assert
         self.assertEqual(res.headers.get("access-control-allow-origin"), "http://localhost:5173")
 
-    def test_rejects_other_origin(self):
+    def test_それ以外のoriginからのリクエストは許可されない(self):
+        # Act
         res = self._preflight("http://evil.example.com")
 
+        # Assert
         self.assertNotIn("access-control-allow-origin", res.headers)
 
 
 class TestDocs(unittest.TestCase):
-    def test_docs_is_served(self):
-        res = TestClient(create_app()).get("/docs")
+    def test_docsを開くとSwaggerUIが返る(self):
+        # Arrange
+        client = TestClient(create_app())
 
+        # Act
+        res = client.get("/docs")
+
+        # Assert
         self.assertEqual(res.status_code, 200)
 
 
 class TestMain(unittest.TestCase):
-    def test_listens_on_localhost_8000_by_default(self):
+    def _run_main(self, argv: list[str]) -> dict:
         from api.__main__ import main
 
         with patch("api.__main__.uvicorn.run") as run:
-            main([])
+            main(argv)
+        return run.call_args.kwargs
 
-        _, kwargs = run.call_args
-        self.assertEqual(kwargs["host"], "127.0.0.1")
-        self.assertEqual(kwargs["port"], 8000)
+    def test_引数なしで起動すると127_0_0_1の8000番で待ち受ける(self):
+        # Act
+        kwargs = self._run_main([])
 
-    def test_accepts_port_option(self):
-        from api.__main__ import main
+        # Assert
+        self.assertEqual((kwargs["host"], kwargs["port"]), ("127.0.0.1", 8000))
 
-        with patch("api.__main__.uvicorn.run") as run:
-            main(["--port", "9000"])
+    def test_portを指定するとそのポートで127_0_0_1だけ待ち受ける(self):
+        # Act
+        kwargs = self._run_main(["--port", "9000"])
 
-        _, kwargs = run.call_args
-        self.assertEqual(kwargs["host"], "127.0.0.1")
-        self.assertEqual(kwargs["port"], 9000)
+        # Assert
+        self.assertEqual((kwargs["host"], kwargs["port"]), ("127.0.0.1", 9000))
 
-    def test_has_no_host_option(self):
-        from api.__main__ import main
-
+    def test_hostを指定すると起動せずに終了する(self):
+        # Act / Assert
         with self.assertRaises(SystemExit):
-            main(["--host", "0.0.0.0"])
+            self._run_main(["--host", "0.0.0.0"])
