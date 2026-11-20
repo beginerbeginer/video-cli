@@ -58,3 +58,7 @@ output-*.mp3
 # Claude Code - 個人メモ・作業履歴は追跡しない
 .claude/memory/
 .claude/projects/
+
+# フロントエンド（frontend/）
+node_modules/
+frontend/dist/
