@@ -2,6 +2,7 @@
 
 import json
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -31,13 +32,57 @@ class TestReleasePleaseConfig(unittest.TestCase):
         self.config = load_json("release-please-config.json")
         self.package = self.config["packages"]["."]
 
+    # release-please を入れる前（2026-05-22）に手で作ったタグ。
+    # Why not git のタグだけを見る: CI の actions/checkout は既定でタグを取ってこないので、
+    # タグが無いクローンでもこの下限で確かめられるよう、ここに書いておく
+    MANUAL_RELEASE_TAGS = ("v0.2.0", "v0.3.0")
+
+    @staticmethod
+    def parse_version(text: str) -> tuple[int, ...]:
+        return tuple(int(part) for part in text.removeprefix("v").split("."))
+
+    @staticmethod
+    def git_release_tags() -> list[str]:
+        try:
+            result = subprocess.run(
+                ["git", "tag", "--list", "v[0-9]*"], cwd=ROOT, capture_output=True, text=True, check=True
+            )
+        except (OSError, subprocess.CalledProcessError):
+            return []
+        return [tag for tag in result.stdout.split() if re.fullmatch(r"v\d+\.\d+\.\d+", tag)]
+
+    def manifest_version(self) -> str:
+        return load_json(".release-please-manifest.json")["."]
+
     def test_manifestのバージョンがpyprojectと同じ(self):
-        manifest = load_json(".release-please-manifest.json")
         # Why not tomllib: requires-python が 3.10 からで、tomllib は 3.11 から
         pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
         version = re.search(r'^version = "([^"]+)"$', pyproject, re.MULTILINE).group(1)
 
-        self.assertEqual(manifest["."], version)
+        self.assertEqual(self.manifest_version(), version)
+
+    def test_manifestのバージョンがuvのロックファイルと同じ(self):
+        lock = (ROOT / "uv.lock").read_text(encoding="utf-8")
+        version = re.search(r'^name = "video-cli"\nversion = "([^"]+)"$', lock, re.MULTILINE).group(1)
+
+        self.assertEqual(self.manifest_version(), version)
+
+    def test_manifestのバージョンは既存のタグより小さくならない(self):
+        # Why not 小さくてもよい: release-please はマニフェストの次の版を出すので、
+        # 既存のタグより古い番号だと、すでにあるタグと同じ番号を作ろうとして失敗する
+        tags = [*self.MANUAL_RELEASE_TAGS, *self.git_release_tags()]
+        latest_tag = max(tags, key=self.parse_version)
+
+        self.assertGreaterEqual(self.parse_version(self.manifest_version()), self.parse_version(latest_tag))
+
+    def test_CHANGELOGには手で作ったタグと同じかそれより古い版を載せない(self):
+        # Why not 載せてもよい: 手で作ったタグの版は release-please が出したものではないので、
+        # CHANGELOG にあると、その版を release-please が出したことになってしまう
+        changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        versions = re.findall(r"^##? \[(\d+\.\d+\.\d+)\]", changelog, re.MULTILINE)
+        floor = max(self.parse_version(tag) for tag in self.MANUAL_RELEASE_TAGS)
+
+        self.assertEqual([v for v in versions if self.parse_version(v) <= floor], [])
 
     def test_出発点のコミットを指定している(self):
         self.assertRegex(self.config["bootstrap-sha"], r"^[0-9a-f]{40}$")
