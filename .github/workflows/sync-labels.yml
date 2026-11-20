@@ -16,21 +16,34 @@ on:
       - .github/workflows/sync-labels.yml
   workflow_dispatch:
 
-permissions:
-  contents: read
-  issues: write
+# Why not ワークフロー全体に issues: write: PR のコードまで書き込みのトークンで動いてしまう。
+# 権限はジョブごとに、必要な分だけ付ける。
+permissions: {}
 
 concurrency:
   group: sync-labels-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  sync:
+  check:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: 定義を確かめ、実行するコマンドを表示する
+        run: python3 scripts/sync_labels.py .github/labels.json --dry-run
+
+  sync:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
       - name: ラベルを反映する
         env:
           GH_TOKEN: ${{ github.token }}
-          DRY_RUN: ${{ github.event_name == 'pull_request' && '--dry-run' || '' }}
-        run: python3 scripts/sync_labels.py .github/labels.json $DRY_RUN
+        run: python3 scripts/sync_labels.py .github/labels.json
