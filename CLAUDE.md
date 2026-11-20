@@ -43,7 +43,7 @@ main.py        ← エントリーポイント・ディスパッチ
 4. 実装して Green にする
 5. gh pc でPR作成
 6. gh pr checks N --watch でCI確認
-7. gh pm N でマージ
+7. gh pr merge N --squash --delete-branch   # Squash でマージし、ブランチを消す
 8. git checkout main && git pull
 ```
 
@@ -247,6 +247,6 @@ What/How は書かない（コードを読めばわかる）。
 |-----------|------|
 | `gh ic` | issue 作成 |
 | `gh pc` | PR 作成（main へ） |
-| `gh pm N` | PR マージ＆ブランチ削除 |
+| `gh pm N` | PR を Squash でマージ＆ブランチ削除（`gh pr merge N --squash --delete-branch`） |
 | `gh il` | issue 一覧 |
 | `gh mypr` | 自分の PR 一覧 |
