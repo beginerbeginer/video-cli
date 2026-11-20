@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
 from domain import operations
@@ -8,6 +9,10 @@ from shared.errors import ValidationError
 
 # Why not "*": PC 内のファイルを扱う API なので、Vite の dev サーバー以外のページから叩かれたくない。
 DEV_CORS_ORIGINS = ["http://localhost:5173"]
+# Why not 127.0.0.1 で待ち受けるだけ: DNS リバインディングで、悪意のあるサイトのドメインが
+# 127.0.0.1 を指すと、ブラウザからこの API を呼べてしまう。Host を見ればそのドメイン名が分かる。
+# ポートは TrustedHostMiddleware が外して比べるので、Vite 経由（localhost:5173）もこのまま通る。
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 
 def _is_available(ensure_installed) -> bool:
@@ -32,6 +37,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # Why not 先に追加: Starlette は後に追加したミドルウェアほど外側で動く。Host の確認を一番外にする。
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
     app.add_exception_handler(ValidationError, _handle_validation_error)
 
     @app.get("/api/health")

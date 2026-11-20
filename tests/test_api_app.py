@@ -8,13 +8,18 @@ from domain import operations
 from shared.errors import ValidationError
 
 
+def _local_client(app=None) -> TestClient:
+    # Why not TestClient の既定（Host: testserver）: Host の確認で拒否されるため、実際の起動先にそろえる。
+    return TestClient(app or create_app(), base_url="http://127.0.0.1:8000")
+
+
 def _which_only(*available: str):
     return lambda name: f"/usr/bin/{name}" if name in available else None
 
 
 class TestHealth(unittest.TestCase):
     def setUp(self):
-        self.client = TestClient(create_app())
+        self.client = _local_client()
 
     def test_ffmpegとffprobeがあると両方trueが返る(self):
         # Arrange
@@ -39,7 +44,7 @@ class TestHealth(unittest.TestCase):
 class TestOperations(unittest.TestCase):
     def test_操作一覧はメニュー順でexitを除いて返る(self):
         # Arrange
-        client = TestClient(create_app())
+        client = _local_client()
         expected = [
             {"id": operation, "label": label}
             for operation, label in operations.OPERATION_LABELS.items()
@@ -63,7 +68,7 @@ class TestValidationErrorHandler(unittest.TestCase):
         def _raise():
             raise exc
 
-        return TestClient(app)
+        return _local_client(app)
 
     def test_fieldつきのValidationErrorは422とerrorsで返る(self):
         # Arrange
@@ -95,7 +100,7 @@ class TestValidationErrorHandler(unittest.TestCase):
 
 class TestCors(unittest.TestCase):
     def setUp(self):
-        self.client = TestClient(create_app())
+        self.client = _local_client()
 
     def _preflight(self, origin: str):
         return self.client.options(
@@ -121,7 +126,7 @@ class TestCors(unittest.TestCase):
 class TestDocs(unittest.TestCase):
     def test_docsを開くとSwaggerUIが返る(self):
         # Arrange
-        client = TestClient(create_app())
+        client = _local_client()
 
         # Act
         res = client.get("/docs")
@@ -156,3 +161,46 @@ class TestMain(unittest.TestCase):
         # Act / Assert
         with self.assertRaises(SystemExit):
             self._run_main(["--host", "0.0.0.0"])
+
+
+class TestTrustedHost(unittest.TestCase):
+    def setUp(self):
+        self.client = _local_client()
+
+    def _get_health(self, host: str):
+        return self.client.get("/api/health", headers={"Host": host})
+
+    def test_Hostがevil_exampleのリクエストは400で拒否される(self):
+        # Act
+        res = self._get_health("evil.example")
+
+        # Assert
+        self.assertEqual(res.status_code, 400)
+
+    def test_Hostが127_0_0_1のリクエストは通る(self):
+        # Act
+        res = self._get_health("127.0.0.1:8000")
+
+        # Assert
+        self.assertEqual(res.status_code, 200)
+
+    def test_Hostがlocalhostのリクエストは通る(self):
+        # Act
+        res = self._get_health("localhost:8000")
+
+        # Assert
+        self.assertEqual(res.status_code, 200)
+
+    def test_Viteのdevサーバー経由のHostのリクエストは通る(self):
+        # Act
+        res = self._get_health("localhost:5173")
+
+        # Assert
+        self.assertEqual(res.status_code, 200)
+
+    def test_localhostで終わる別ドメインのHostは拒否される(self):
+        # Act
+        res = self._get_health("localhost.evil.example")
+
+        # Assert
+        self.assertEqual(res.status_code, 400)
