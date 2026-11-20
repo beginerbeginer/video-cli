@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/v17.6.0/schemas/config.json",
+  "bootstrap-sha": "07c765a53472fb212ded0fa2d78fd72a7d14d017",
+  "bump-minor-pre-major": true,
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "changelog-sections": [
+    { "type": "feat", "section": "新機能" },
+    { "type": "fix", "section": "不具合の修正" },
+    { "type": "perf", "section": "性能の改善" },
+    { "type": "revert", "section": "取り消し", "hidden": true },
+    { "type": "refactor", "section": "リファクタリング", "hidden": true },
+    { "type": "test", "section": "テスト", "hidden": true },
+    { "type": "docs", "section": "ドキュメント", "hidden": true },
+    { "type": "ci", "section": "CI", "hidden": true },
+    { "type": "build", "section": "ビルド", "hidden": true },
+    { "type": "chore", "section": "その他", "hidden": true },
+    { "type": "style", "section": "コードスタイル", "hidden": true }
+  ],
+  "packages": {
+    ".": {
+      "release-type": "python",
+      "package-name": "video-cli",
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        { "type": "toml", "path": "uv.lock", "jsonpath": "$.package[?(@.name.value==='video-cli')].version" }
+      ]
+    }
+  }
+}
