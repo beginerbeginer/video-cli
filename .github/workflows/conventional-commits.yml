@@ -17,7 +17,7 @@ jobs:
   pr-title:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: PR タイトルを確かめる（違えば失敗）
         # Why not run の中に ${{ github.event.pull_request.title }} を直接書く: タイトルにシェルの
         # 構文を書かれるとそのまま実行されてしまう。環境変数で渡せば文字列のまま扱える。
@@ -28,7 +28,7 @@ jobs:
   commits:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: PR のコミットメッセージを集める

@@ -16,4 +16,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # sync-labels は既定で false。手で付けた `領域:*` を、パスに合わないからと外さないため
-      - uses: actions/labeler@v5
+      - uses: actions/labeler@v7

@@ -31,7 +31,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: 定義を確かめ、実行するコマンドを表示する
         run: python3 scripts/sync_labels.py .github/labels.json --dry-run
 
@@ -42,7 +42,7 @@ jobs:
       contents: read
       issues: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: ラベルを反映する
         env:
           GH_TOKEN: ${{ github.token }}
