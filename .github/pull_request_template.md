@@ -15,6 +15,7 @@ Closes #
 ## 確認したこと
 
 - [ ] `uv run ruff check .`
+- [ ] `uv run ruff format --check .`
 - [ ] `uv run pytest`
 
 <!-- 下の区画は GitHub Actions（pr-ai-attribution）が各コミットの Co-Authored-By から自動で書き込みます。消さないでください -->
