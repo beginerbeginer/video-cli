@@ -1,0 +1,22 @@
+# Git フックの設定。リポジトリ直下に置くのは、frontend/ 以外（Python 側）のチェックも後から同じ場所に足せるようにするため。
+# フックは frontend/ で `npm install` したときに `prepare` スクリプトで入る。
+pre-commit:
+  jobs:
+    - name: frontend
+      root: "frontend/"
+      glob: "*.{ts,tsx,js,json,css,md,html}"
+      group:
+        # 自動修正どうしが同じファイルを同時に書き換えないよう、並列にせず順番に流す。
+        piped: true
+        jobs:
+          - name: eslint
+            glob: "*.{ts,tsx}"
+            run: npx eslint --fix --max-warnings 0 --no-warn-ignored {staged_files}
+            stage_fixed: true
+          - name: prettier
+            run: npx prettier --write --ignore-unknown {staged_files}
+            stage_fixed: true
+          # 型は 1 ファイルだけでは判定できない（他のファイルの型に依存する）ので、TS を変えたときはプロジェクト全体を見る。
+          - name: typecheck
+            glob: "*.{ts,tsx}"
+            run: npx tsc -b

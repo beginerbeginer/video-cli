@@ -29,8 +29,10 @@ htmlcov/
 .dmypy.json
 .pytype/
 
-# エディタ
-.vscode/
+# エディタ（.vscode は保存時の自動修正をそろえるため、共有する 2 ファイルだけ追跡する）
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
@@ -58,3 +60,7 @@ output-*.mp3
 # Claude Code - 個人メモ・作業履歴は追跡しない
 .claude/memory/
 .claude/projects/
+
+# フロントエンド（frontend/）
+node_modules/
+frontend/dist/
