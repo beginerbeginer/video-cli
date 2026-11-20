@@ -1,4 +1,5 @@
 """PR に含まれるコミットの Co-Authored-By から、使った AI ツール / モデルの区画を PR 本文に書き込む。
+あわせて、Claude Code が本文に付けるセッションの URL の行を取り除く（issue #120）。
 
 使い方: python scripts/pr_ai_attribution.py <git log -z の出力ファイル> <今の PR 本文ファイル>
 新しい PR 本文を stdout に出す。GitHub への読み書きはワークフロー側の gh が行う。
@@ -22,6 +23,13 @@ _COAUTHOR_RE = re.compile(r"^co-authored-by:\s*(?P<name>.+?)\s*<[^>]*>\s*$", re.
 _SECTION_RE = re.compile(
     rf"^[ \t]*{re.escape(START_MARKER)}[ \t]*\r?$.*?^[ \t]*{re.escape(END_MARKER)}[ \t]*(?=\r?$)",
     re.MULTILINE | re.DOTALL,
+)
+
+# Why not 本文中の URL もすべて消す: ルールを説明する文などで URL に触れた箇所まで書き換えてしまう。
+# Claude Code が末尾に付けるのは URL だけの行なので、その行（と直前の空行）だけを消す。
+_SESSION_URL_LINE_RE = re.compile(
+    r"(?:^[ \t]*\r?\n)*^[ \t]*https://claude\.ai/code/session_\S*[ \t]*(?:\r?\n|\Z)",
+    re.MULTILINE,
 )
 
 
@@ -72,8 +80,13 @@ def replace_section(body: str, section: str) -> str:
     return f"{stripped}\n\n{section}\n" if stripped else f"{section}\n"
 
 
+def remove_session_urls(body: str) -> str:
+    return _SESSION_URL_LINE_RE.sub("", body)
+
+
 def build_new_body(git_log: str, body: str) -> str:
-    return replace_section(body, render_section(extract_coauthors(git_log.split("\0"))))
+    section = render_section(extract_coauthors(git_log.split("\0")))
+    return replace_section(remove_session_urls(body), section)
 
 
 def main(argv: list[str]) -> int:
