@@ -19,4 +19,6 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv sync
       - run: uv run ruff check .
+      # Why not `ruff format .`: CI で書き換えても main には反映されないので、確かめるだけにする
+      - run: uv run ruff format --check .
       - run: uv run pytest
