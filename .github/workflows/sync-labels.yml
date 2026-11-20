@@ -1,0 +1,36 @@
+name: sync-labels
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/labels.json
+      - scripts/sync_labels.py
+      - .github/workflows/sync-labels.yml
+  # 定義ファイルが壊れていないかを、マージ前に PR で確かめる（--dry-run なので書き込まない）
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/labels.json
+      - scripts/sync_labels.py
+      - .github/workflows/sync-labels.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: sync-labels-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ラベルを反映する
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ github.event_name == 'pull_request' && '--dry-run' || '' }}
+        run: python3 scripts/sync_labels.py .github/labels.json $DRY_RUN
