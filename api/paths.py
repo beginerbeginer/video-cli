@@ -22,8 +22,9 @@ def is_within_root(path: str | os.PathLike, root: str | os.PathLike | None = Non
 
 class PathOutsideRootError(Exception):
     # Why not メッセージにパスを入れる: 範囲の外にどんなパスがあるかを、レスポンス経由で教えてしまう。
-    def __init__(self) -> None:
+    def __init__(self, field: str | None = None) -> None:
         super().__init__("参照できる範囲の外のパスです。")
+        self.field = field
 
 
 def resolve_within_root(path: str | os.PathLike, root: str | os.PathLike | None = None) -> Path:

@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
+from api import files
+from api.paths import PathOutsideRootError
 from domain import operations
 from ffmpeg.probe import ensure_ffmpeg_installed, ensure_ffprobe_installed
 from shared.errors import ValidationError
@@ -49,6 +51,10 @@ async def _handle_validation_error(_: Request, exc: ValidationError) -> JSONResp
     return JSONResponse(status_code=422, content={"errors": [{"field": field, "message": str(exc)}]})
 
 
+async def _handle_path_outside_root(_: Request, exc: PathOutsideRootError) -> JSONResponse:
+    return JSONResponse(status_code=403, content={"errors": [{"field": exc.field, "message": str(exc)}]})
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="video-cli API")
     app.add_middleware(
@@ -61,6 +67,7 @@ def create_app() -> FastAPI:
     # Why not 先に追加: Starlette は後に追加したミドルウェアほど外側で動く。Host の確認を一番外にする。
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
     app.add_exception_handler(ValidationError, _handle_validation_error)
+    app.add_exception_handler(PathOutsideRootError, _handle_path_outside_root)
 
     @app.get("/api/health")
     def health() -> dict[str, bool]:
@@ -76,5 +83,7 @@ def create_app() -> FastAPI:
             for operation, label in operations.OPERATION_LABELS.items()
             if operation != operations.EXIT
         ]
+
+    app.include_router(files.router)
 
     return app
