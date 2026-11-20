@@ -181,24 +181,28 @@ class TestRunFfmpegStderrDrain(_FakeFfmpegTestCase):
         sys.exit(int(sys.argv[-1]) if sys.argv[-1].isdigit() else 0)
     """
 
-    def test_one_megabyte_of_stderr_does_not_block(self):
+    def test_stderrに1MB書くプロセスでも止まらずに完了する(self):
+        # Arrange
         command = self.make_fake_ffmpeg(self._NOISY_BODY)
         received = []
 
+        # Act
         outcome = self.run_with_timeout(10, command=command, progress_callback=received.append)
 
+        # Assert
         self.assertNotIn("error", outcome)
         self.assertEqual(outcome["result"], RunResult(executed=True, command=command))
-        self.assertEqual(len(received), 1)
-        self.assertEqual(received[0].out_time_seconds, 1.0)
+        self.assertEqual([info.out_time_seconds for info in received], [1.0])
 
-    def test_failure_detail_contains_only_tail_of_stderr(self):
-        # 仕様: 失敗時の detail には stderr の末尾数十行だけを入れる
-        #       1MB 全てを入れると例外メッセージとして扱えない大きさになるため
+    def test_失敗するとdetailにはstderrの末尾だけが入る(self):
+        # 仕様: 1MB 全てを入れると例外メッセージとして扱えない大きさになるため
+        # Arrange
         command = self.make_fake_ffmpeg(self._NOISY_BODY) + ["1"]
 
+        # Act
         outcome = self.run_with_timeout(10, command=command, progress_callback=lambda _: None)
 
+        # Assert
         error = outcome.get("error")
         self.assertIsInstance(error, FfmpegExecutionError)
         self.assertIn("終了コード: 1", error.detail)
@@ -210,7 +214,8 @@ class TestRunFfmpegStderrDrain(_FakeFfmpegTestCase):
 class TestRunFfmpegLogCallback(_FakeFfmpegTestCase):
     # 仕様: log_callback に stderr の各行（改行なし）を順番どおりに渡す
 
-    def test_log_callback_receives_stderr_lines(self):
+    def test_log_callbackを渡すとstderrの各行が順番に渡される(self):
+        # Arrange
         command = self.make_fake_ffmpeg("""
             import sys
             sys.stderr.write("first line\\nsecond line\\n")
@@ -219,8 +224,10 @@ class TestRunFfmpegLogCallback(_FakeFfmpegTestCase):
         """)
         lines = []
 
+        # Act
         outcome = self.run_with_timeout(10, command=command, log_callback=lines.append)
 
+        # Assert
         self.assertNotIn("error", outcome)
         self.assertEqual(lines, ["first line", "second line"])
 
@@ -240,58 +247,66 @@ class TestRunFfmpegCancel(_FakeFfmpegTestCase):
             time.sleep(0.05)
     """
 
-    def test_cancel_terminates_process_and_raises(self):
+    def test_cancel_eventをセットするとプロセスが止まりFfmpegCancelledErrorになる(self):
+        # Arrange
         command = self.make_fake_ffmpeg(self._ENDLESS_BODY)
         cancel = threading.Event()
-
         started = time.monotonic()
+
+        # Act
         outcome = self.run_with_timeout(
             10, command=command, cancel_event=cancel, progress_callback=lambda _: cancel.set()
         )
 
+        # Assert
         self.assertIsInstance(outcome.get("error"), FfmpegCancelledError)
         self.assertLess(time.monotonic() - started, 5)
         self.assertEqual(len(self.procs), 1)
         self.assertIsNotNone(self.procs[0].poll())
 
-    def test_cancel_kills_process_that_ignores_terminate(self):
-        # 仕様: terminate で止まらないときは猶予のあと kill する
+    def test_terminateを無視するプロセスは猶予のあとkillされる(self):
+        # Arrange
         command = self.make_fake_ffmpeg(self._ENDLESS_BODY) + ["ignore-term"]
         cancel = threading.Event()
 
+        # Act
         with patch("ffmpeg.runner._TERMINATE_GRACE_SECONDS", 0.3):
             outcome = self.run_with_timeout(
                 10, command=command, cancel_event=cancel, progress_callback=lambda _: cancel.set()
             )
 
+        # Assert
         self.assertIsInstance(outcome.get("error"), FfmpegCancelledError)
         self.assertEqual(self.procs[0].poll(), -9)
 
-    def test_cancel_works_without_progress_callback(self):
-        # 仕様: progress_callback を渡さなくても cancel_event だけでキャンセルできる
-        #       API はログだけ購読してキャンセルボタンを出すことがあるため
+    def test_progress_callbackなしでもcancel_eventでキャンセルできる(self):
+        # 仕様: API はログだけ購読してキャンセルボタンを出すことがあるため
+        # Arrange
         command = self.make_fake_ffmpeg(self._ENDLESS_BODY)
         cancel = threading.Event()
         threading.Timer(0.3, cancel.set).start()
 
+        # Act
         outcome = self.run_with_timeout(10, command=command, cancel_event=cancel)
 
+        # Assert
         self.assertIsInstance(outcome.get("error"), FfmpegCancelledError)
 
-    def test_already_set_cancel_event_does_not_start_process(self):
-        # 仕様: 開始前にキャンセル済みなら ffmpeg を起動しない
+    def test_開始前にcancel_eventがセット済みならプロセスを起動しない(self):
+        # Arrange
         command = self.make_fake_ffmpeg(self._ENDLESS_BODY)
         cancel = threading.Event()
         cancel.set()
 
+        # Act
         outcome = self.run_with_timeout(10, command=command, cancel_event=cancel)
 
+        # Assert
         self.assertIsInstance(outcome.get("error"), FfmpegCancelledError)
         self.assertEqual(self.procs, [])
 
-    def test_cancelled_error_is_not_execution_error(self):
-        # 仕様: キャンセルは失敗とは別の例外にする
-        #       呼び出し側が「失敗しました」と表示しないで済むようにするため
+    def test_FfmpegCancelledErrorはFfmpegExecutionErrorのサブクラスではない(self):
+        # 仕様: 呼び出し側がキャンセルを「失敗しました」と表示しないで済むようにするため
         self.assertFalse(issubclass(FfmpegCancelledError, FfmpegExecutionError))
 
 
@@ -317,34 +332,65 @@ class TestParseProgressChunk(unittest.TestCase):
         self.assertEqual(info.frame, 120)
 
     def test_missing_fields_fall_back_to_defaults(self):
-        # 仕様: チャンクにフィールドがなければ frame=0, speed="", out_time="" を返す
+        # 仕様: チャンクにフィールドがなければ frame=0, speed="", out_time="", out_time_seconds=0.0 を返す
         info = parse_progress_chunk(["progress=continue"])
         self.assertEqual(info.frame, 0)
         self.assertEqual(info.speed, "")
         self.assertEqual(info.out_time, "")
         self.assertEqual(info.out_time_seconds, 0.0)
 
-    def test_out_time_seconds_from_out_time_us(self):
-        # 仕様: out_time_us（マイクロ秒）があればそれを秒に換算する
-        info = parse_progress_chunk(["out_time_us=90500000", "out_time=00:01:30.500000", "progress=continue"])
+    def test_out_time_usがあると秒に換算してout_time_secondsになる(self):
+        # Arrange
+        lines = ["out_time_us=90500000", "out_time=00:01:30.500000", "progress=continue"]
+
+        # Act
+        info = parse_progress_chunk(lines)
+
+        # Assert
         self.assertEqual(info.out_time_seconds, 90.5)
 
-    def test_out_time_seconds_falls_back_to_out_time(self):
-        # 仕様: out_time_us が無ければ out_time（HH:MM:SS.ffffff）から計算する
-        info = parse_progress_chunk(["out_time=01:02:03.250000", "progress=continue"])
+    def test_out_time_usが無いとout_timeから秒を計算する(self):
+        # Arrange
+        lines = ["out_time=01:02:03.250000", "progress=continue"]
+
+        # Act
+        info = parse_progress_chunk(lines)
+
+        # Assert
         self.assertEqual(info.out_time_seconds, 3723.25)
 
-    def test_out_time_seconds_ignores_not_available(self):
-        # 仕様: 開始直後の ffmpeg は N/A を出すことがあるので、そのときは out_time を使うか 0.0 にする
-        info = parse_progress_chunk(["out_time_us=N/A", "out_time=00:00:02.000000", "progress=continue"])
+    def test_out_time_usがNAならout_timeから秒を計算する(self):
+        # 仕様: 開始直後の ffmpeg は out_time_us に N/A を出すことがあるため
+        # Arrange
+        lines = ["out_time_us=N/A", "out_time=00:00:02.000000", "progress=continue"]
+
+        # Act
+        info = parse_progress_chunk(lines)
+
+        # Assert
         self.assertEqual(info.out_time_seconds, 2.0)
-        info = parse_progress_chunk(["out_time_us=N/A", "out_time=N/A", "progress=continue"])
+
+    def test_out_time_usもout_timeもNAならout_time_secondsは0になる(self):
+        # Arrange
+        lines = ["out_time_us=N/A", "out_time=N/A", "progress=continue"]
+
+        # Act
+        info = parse_progress_chunk(lines)
+
+        # Assert
         self.assertEqual(info.out_time_seconds, 0.0)
 
-    def test_out_time_string_is_kept_for_cli_display(self):
-        # 仕様: out_time_seconds を足しても CLI 表示用の out_time 文字列は今までどおり
-        info = parse_progress_chunk(["out_time_us=5000000", "out_time=00:00:05.000000", "progress=continue"])
+    def test_out_time_secondsを足してもout_time文字列は今までどおり(self):
+        # 仕様: CLI の進捗表示（make_cli_progress_callback）の見た目を変えないため
+        # Arrange
+        lines = ["out_time_us=5000000", "out_time=00:00:05.000000", "progress=continue"]
+
+        # Act
+        info = parse_progress_chunk(lines)
+
+        # Assert
         self.assertEqual(info.out_time, "00:00:05")
+
 
 
 if __name__ == "__main__":
