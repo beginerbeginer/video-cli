@@ -72,9 +72,18 @@ class TestRunFfmpegWithCallback(unittest.TestCase):
         # 仕様: progress=continue と progress=end の各チャンクでコールバックを呼ぶ
         #       progress=end 時にも呼ぶことで最終進捗（100%）を表示できる
         lines = [
-            "frame=10", "speed=1.0x", "out_time=00:00:01.000000", "progress=continue",
-            "frame=20", "speed=1.0x", "out_time=00:00:02.000000", "progress=continue",
-            "frame=30", "speed=1.0x", "out_time=00:00:03.000000", "progress=end",
+            "frame=10",
+            "speed=1.0x",
+            "out_time=00:00:01.000000",
+            "progress=continue",
+            "frame=20",
+            "speed=1.0x",
+            "out_time=00:00:02.000000",
+            "progress=continue",
+            "frame=30",
+            "speed=1.0x",
+            "out_time=00:00:03.000000",
+            "progress=end",
         ]
         mock_popen, _ = _make_mock_popen(lines)
         mock_popen_cls.side_effect = mock_popen
