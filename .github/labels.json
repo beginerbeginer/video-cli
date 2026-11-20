@@ -1,0 +1,52 @@
+[
+  {
+    "name": "feat",
+    "color": "1D76DB",
+    "description": "種類: 新しい機能を追加する"
+  },
+  {
+    "name": "infra",
+    "color": "5319E7",
+    "description": "種類: 内部の改善・リファクタリング・開発環境の整備。利用者から見た機能は変わらない"
+  },
+  {
+    "name": "まとめ",
+    "color": "FBCA04",
+    "description": "種類: 複数の issue を束ねる親 issue や、ロードマップ"
+  },
+  {
+    "name": "GUI刷新",
+    "color": "D93F0B",
+    "description": "取り組み: GUI を React + FastAPI に作り直す取り組み（#82）に属する"
+  },
+  {
+    "name": "領域:CLI",
+    "color": "BFDADC",
+    "description": "領域: ターミナルで使う CLI（ui/cli/, main.py）"
+  },
+  {
+    "name": "領域:ロジック",
+    "color": "BFDADC",
+    "description": "領域: 動画処理のルールと入力チェック（domain/, usecases/, validation/, shared/）"
+  },
+  {
+    "name": "領域:FFmpeg",
+    "color": "BFDADC",
+    "description": "領域: FFmpeg・ffprobe の呼び出し（ffmpeg/）"
+  },
+  {
+    "name": "領域:API",
+    "color": "BFDADC",
+    "description": "領域: Python の API サーバー（api/）"
+  },
+  {
+    "name": "領域:フロント",
+    "color": "BFDADC",
+    "description": "領域: React の画面（frontend/）"
+  },
+  {
+    "name": "領域:開発環境",
+    "color": "BFDADC",
+    "description": "領域: CI、lint、テスト基盤、Claude Code の設定、ドキュメント"
+  }
+]
