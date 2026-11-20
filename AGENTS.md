@@ -94,6 +94,41 @@ Co-Authored-By: <ツール名> (<実際のモデル名>) <noreply アドレス>
 - 本文は `.github/pull_request_template.md` に沿って書く
 - 「使用した AI ツール / モデル」の区画（`<!-- ai-attribution:start -->` 〜 `<!-- ai-attribution:end -->`）は、ワークフロー `pr-ai-attribution` が各コミットの Co-Authored-By から自動で書き込む。手で書かない・消さない
 
+## issue と PR のラベル
+
+ラベルの名前・説明・色は `.github/labels.json` で管理する。main にマージされるとワークフロー `sync-labels` が GitHub に反映する（手動実行も可）。ラベルを増やす・変えるときは、GitHub の画面ではなくこのファイルを直す。
+
+**種類**: issue 1 つにつき 1 つ付ける
+
+| ラベル | 役割 |
+|---|---|
+| `feat` | 新しい機能を追加する |
+| `infra` | 内部の改善・リファクタリング・開発環境の整備。利用者から見た機能は変わらない |
+| `まとめ` | 複数の issue を束ねる親 issue や、ロードマップ |
+
+**取り組み**: 該当するときだけ付ける
+
+| ラベル | 役割 |
+|---|---|
+| `GUI刷新` | GUI を React + FastAPI に作り直す取り組み（#82）に属する |
+
+**領域**: 変更する場所。1 つ以上付ける
+
+| ラベル | 役割 |
+|---|---|
+| `領域:CLI` | ターミナルで使う CLI（`ui/cli/`, `main.py`） |
+| `領域:ロジック` | 動画処理のルールと入力チェック（`domain/`, `usecases/`, `validation/`, `shared/`） |
+| `領域:FFmpeg` | FFmpeg・ffprobe の呼び出し（`ffmpeg/`） |
+| `領域:API` | Python の API サーバー（`api/`） |
+| `領域:フロント` | React の画面（`frontend/`） |
+| `領域:開発環境` | CI、lint、テスト基盤、Claude Code の設定、ドキュメント |
+
+**付け方**
+
+- issue を作るときは、種類を 1 つ、領域を 1 つ以上付け、該当すれば取り組みも付ける
+- PR には、対応する issue と同じラベルを付ける
+- PR の `領域:*` は、変更したパスからワークフロー `labeler` も自動で付ける（`.github/labeler.yml`）。自動で付かなかった領域は手で足す
+
 ## コードコメントのルール
 
 コメントには **Why not** を書く（なぜ他の選択肢を選ばなかったか）。  
