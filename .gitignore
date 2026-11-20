@@ -62,3 +62,5 @@ output-*.mp3
 # フロントエンド（frontend/）
 node_modules/
 frontend/dist/
+frontend/storybook-static/
+frontend/debug-storybook.log
