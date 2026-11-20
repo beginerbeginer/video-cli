@@ -79,8 +79,20 @@ How（どう変えたか）はコードを見ればわかるので書かない�
 変更した理由・背景を説明する。
 何が問題で、なぜこの変更が必要だったのかを書く。
 
-Co-Authored-By: Codex Sonnet 4.6 <noreply@anthropic.com>
+Co-Authored-By: <ツール名> (<実際のモデル名>) <noreply アドレス>
 ```
+
+### AI ツール / モデルの記載（Co-Authored-By）
+
+- Co-Authored-By には **実際に使っている AI ツールとモデル** を書く。モデル名をこのファイルや過去のコミットから書き写さない
+- Codex なら、ツール名は `Codex`、モデル名は今のセッションで実際に動いているモデルを書く（例の形: `Co-Authored-By: Codex (<モデル名>) <noreply@openai.com>`）
+- ツール自身がコミット用の attribution 行を指定する場合（Claude Code など）は、その行をそのまま使う
+- AI を使っていないコミットには付けない
+
+### PR
+
+- 本文は `.github/pull_request_template.md` に沿って書く
+- 「使用した AI ツール / モデル」の区画（`<!-- ai-attribution:start -->` 〜 `<!-- ai-attribution:end -->`）は、ワークフロー `pr-ai-attribution` が各コミットの Co-Authored-By から自動で書き込む。手で書かない・消さない
 
 ## コードコメントのルール
 
