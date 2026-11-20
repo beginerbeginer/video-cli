@@ -3,15 +3,22 @@ import userEvent from "@testing-library/user-event";
 import App from "./App";
 
 describe("App", () => {
-  it("video-cli のタイトルを表示する", () => {
+  it("開くと video-cli のタイトルが表示される", () => {
+    // Arrange / Act
     render(<App />);
+
+    // Assert
     expect(screen.getByRole("heading", { level: 1, name: "video-cli" })).toBeInTheDocument();
   });
 
-  it("shadcn/ui の Button が押せる", async () => {
+  it("ボタンを押すとクリック回数が 1 増える", async () => {
+    // Arrange
     render(<App />);
-    const button = screen.getByRole("button", { name: "クリック: 0" });
-    await userEvent.click(button);
+
+    // Act
+    await userEvent.click(screen.getByRole("button", { name: "クリック: 0" }));
+
+    // Assert
     expect(screen.getByRole("button", { name: "クリック: 1" })).toBeInTheDocument();
   });
 });
