@@ -78,6 +78,8 @@ uv sync
 cd frontend && npm ci
 ```
 
+このとき、コミット時のチェック（lefthook）も Git フックとして入る（`package.json` の `prepare` で `lefthook install` が走る）。`lefthook install` を別に打つ必要はない。
+
 ### 起動
 
 ターミナルを 2 つ使う。
@@ -116,6 +118,22 @@ cd frontend && npm run storybook
 
 各ターミナルで `Ctrl+C` を押す。
 
+### 開発に便利なコマンド
+
+どれも `frontend` で打つ。
+
+| コマンド | 内容 |
+|---|---|
+| `npm run lint` | ESLint（警告が 1 件でもあると失敗する） |
+| `npm run lint:fix` | ESLint で直せるものを自動で直す |
+| `npm run typecheck` | TypeScript の型チェック |
+| `npm run format` | Prettier で整形する |
+| `npm run format:check` | 整形されているかだけを確かめる |
+| `npm test` | テスト（Vitest） |
+| `npm run build` | 型チェックしてから本番用にビルドする（`dist/`） |
+
+コミットすると、lefthook が変更した frontend のファイルに ESLint の自動修正・Prettier の整形・型チェックをかける。違反が残っているとコミットは止まる。設定はリポジトリ直下の `lefthook.yml`、細かいルールは `frontend/README.md` にある。
+
 ### よくあるつまずき
 
 - **ポートがすでに使われている**
@@ -127,6 +145,8 @@ cd frontend && npm run storybook
   - 画面に警告を出す処理は、今の雛形にはまだ無い
 - **`npm ci` が `EBADENGINE` で止まる**
   - Node.js が古い。`frontend/.nvmrc` のバージョンに切り替えてから、もう一度 `npm ci` を打つ
+- **`npm ci` で `lefthook@... (postinstall: node postinstall.js)` の警告が出る**
+  - npm がインストールスクリプトの許可を確かめているだけで、Git フックは `prepare` で入る。気にしなくてよい
 
 ## プロジェクト構造
 
