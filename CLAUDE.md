@@ -71,8 +71,20 @@ How（どう変えたか）はコードを見ればわかるので書かない�
 変更した理由・背景を説明する。
 何が問題で、なぜこの変更が必要だったのかを書く。
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+（ここに、実際に使った AI ツールとモデルの Co-Authored-By 行が入る）
 ```
+
+### AI ツール / モデルの記載（Co-Authored-By）
+
+- Co-Authored-By には **実際に使っている AI ツールとモデル** を書く。モデル名をこのファイルや過去のコミットから書き写さない
+- **Claude Code**: Claude Code 自身がコミット・PR 用に指定する attribution 行（`Co-Authored-By: Claude ... <noreply@anthropic.com>` など。実際のモデルに合わせて毎回システムが指定する）を、そのまま使う。このファイルはモデル名を指定しない
+- **Claude Code 以外のツール**: `Co-Authored-By: <ツール名> (<実際のモデル名>) <noreply アドレス>` の形で書く
+- AI を使っていないコミットには付けない
+
+### PR
+
+- 本文は `.github/pull_request_template.md` に沿って書く
+- 「使用した AI ツール / モデル」の区画（`<!-- ai-attribution:start -->` 〜 `<!-- ai-attribution:end -->`）は、ワークフロー `pr-ai-attribution` が各コミットの Co-Authored-By から自動で書き込む。手で書かない・消さない
 
 ## コードコメントのルール
 
