@@ -62,17 +62,34 @@ main.py        ← エントリーポイント・ディスパッチ
 
 ## コミットメッセージのルール
 
-**Why（なぜそうしたのか）を日本語で書く。**  
+**1 行目は `種類: 日本語の要約` にする（[Conventional Commits](https://www.conventionalcommits.org/ja/v1.0.0/)）。**  
+**本文には Why（なぜそうしたのか）を日本語で書く。**  
 How（どう変えたか）はコードを見ればわかるので書かない。
 
 ```
-変更の要約（1行）
+種類: 変更の要約（1行。例: feat: 動画の分割機能を追加する）
 
 変更した理由・背景を説明する。
 何が問題で、なぜこの変更が必要だったのかを書く。
 
 （ここに、実際に使った AI ツールとモデルの Co-Authored-By 行が入る）
 ```
+
+### 種類（1 行目の先頭）
+
+種類は英語の小文字で書き、`: `（コロンと半角空白）のあとに日本語の要約を書く。範囲を示したいときは `fix(ffmpeg): ...` のようにかっこで添えてよい。
+
+| 種類 | 意味 | バージョン |
+|---|---|---|
+| `feat` | 機能の追加 | マイナーを上げる |
+| `fix` | 不具合の修正（セキュリティの修正を含む） | パッチを上げる |
+| `perf` | 性能の改善 | パッチを上げる |
+| `feat!` / `fix!`、または本文に `BREAKING CHANGE:` | 互換性を壊す変更 | メジャーを上げる（0.x の間はマイナー） |
+| `refactor` / `test` / `docs` / `ci` / `build` / `chore` / `style` / `revert` | 利用者から見た動きが変わらない変更 | 上げない（リリースに載らない） |
+
+- `feat` ラベルの issue は `feat` のコミットになる。`infra` ラベルの issue は主に `refactor` / `ci` / `chore` / `docs` などになる
+- 1 つのコミットに種類の違う変更を混ぜない。混ざるならコミットを分ける
+- 形が違うコミットは CI（`conventional-commits` の `commits`）が警告を出す。失敗にはしないが、リリースに載らなくなるので直す
 
 ### AI ツール / モデルの記載（Co-Authored-By）
 
@@ -83,8 +100,47 @@ How（どう変えたか）はコードを見ればわかるので書かない�
 
 ### PR
 
+- PR のタイトルもコミットと同じ `種類: 日本語の要約` の形にする。形が違うと CI（`conventional-commits` の `pr-title`）が失敗する
 - 本文は `.github/pull_request_template.md` に沿って書く
 - 「使用した AI ツール / モデル」の区画（`<!-- ai-attribution:start -->` 〜 `<!-- ai-attribution:end -->`）は、ワークフロー `pr-ai-attribution` が各コミットの Co-Authored-By から自動で書き込む。手で書かない・消さない
+
+## リリースのルール
+
+### バージョン番号: セマンティックバージョニング（SemVer）
+
+番号は `メジャー.マイナー.パッチ` で表し、タグ名には `v` を付ける（例: `v1.4.2`）。
+
+| 変更の種類 | 上げる数字 | 例 |
+|---|---|---|
+| 互換性を壊す変更（今までの使い方ができなくなる） | メジャー | `1.4.2` → `2.0.0` |
+| 機能の追加（今までの使い方はそのまま使える） | マイナー | `1.4.2` → `1.5.0` |
+| 不具合の修正・セキュリティの修正 | パッチ | `1.4.2` → `1.4.3` |
+
+- 上の数字を上げたら、下の数字は 0 に戻す
+- どの数字を上げるかは、前回のリリースから main に入ったコミットの種類で決まる（「コミットメッセージのルール」の表）
+- 今は `0.x` の段階。互換性を壊す変更でも、1.0.0 になるまではマイナーを上げる（`release-please-config.json` の `bump-minor-pre-major`）
+- GUI 刷新（#82）が終わった時点（#99 のマージ後）で `1.0.0` を出す。そのときは、コミットの本文に `Release-As: 1.0.0` と書いたコミットを main に入れる
+
+### リリースの手順（release-please）
+
+1. PR を main にマージすると、ワークフロー `release-please` が動き、次のバージョンと `CHANGELOG.md` の更新を書いた「リリース用の PR」（タイトルは `chore(main): release 0.x.y`）を作る。すでにあれば内容を更新する
+2. リリースに載る種類（`feat` / `fix` / `perf` / 互換性を壊す変更）のコミットが無いあいだは、リリース用の PR は作られない
+3. オーナーがリリース用の PR をマージすると、`v0.x.y` の Git タグと GitHub Releases が作られる
+4. バージョンを書き換えるファイルは `pyproject.toml` と `uv.lock`（video-cli の行だけ）。設定は `release-please-config.json`、今のバージョンは `.release-please-manifest.json` にある
+5. 出発点は `0.1.0`。`bootstrap-sha` に指定したコミットより前の履歴は、最初のリリースに含めない
+
+- ワークフローの手動実行（Actions → release-please → Run workflow）でも、リリース用の PR を作り直せる
+- リポジトリの Settings → Actions → General の「Allow GitHub Actions to create and approve pull requests」が無効だと、リリース用の PR を作れない
+- 別のファイルのバージョンも書き換えたいとき（例: `frontend/package.json`）は、`release-please-config.json` の `packages["."].extra-files` に `{ "type": "json", "path": "frontend/package.json", "jsonpath": "$.version" }` を足す。そのファイルの今のバージョンは `.release-please-manifest.json` と同じにしておく
+
+### 注意: リリース用の PR では CI が自動で動かない
+
+release-please は `GITHUB_TOKEN` でリリース用の PR を作る。GitHub の制限で、`GITHUB_TOKEN` が起こした操作からはほかのワークフロー（`test` や `conventional-commits`）が起動しない。リリース用の PR はバージョンと CHANGELOG だけを変えるので、今はこのままでよい。
+
+CI を動かしたくなったときの対処:
+
+- 手早く済ませるなら: リリース用の PR のブランチに、人が空でないコミットを 1 つ push する（人の操作なので CI が動く）
+- 恒久的には: GitHub App のトークン（`actions/create-github-app-token`）か、権限を絞った fine-grained personal access token をシークレットに登録し、`release-please-action` の `token` に渡す
 
 ## コードコメントのルール
 
