@@ -2,11 +2,8 @@ import { cn } from "./utils";
 
 describe("cn", () => {
   it("条件付きのクラスを渡すと真のものだけが残る", () => {
-    // Arrange
-    const isActive = false;
-
-    // Act
-    const result = cn("p-2", isActive && "font-bold", "text-sm");
+    // Arrange / Act
+    const result = cn("p-2", { "font-bold": false, "text-sm": true });
 
     // Assert
     expect(result).toBe("p-2 text-sm");

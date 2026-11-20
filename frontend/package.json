@@ -9,9 +9,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix --max-warnings 0",
+    "typecheck": "tsc -b",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "vitest run",
-    "typecheck": "tsc -b"
+    "prepare": "lefthook install"
   },
   "dependencies": {
     "@radix-ui/react-slot": "1.5.0",
@@ -22,6 +26,7 @@
     "tailwind-merge": "3.7.0"
   },
   "devDependencies": {
+    "@eslint-react/eslint-plugin": "5.28.8",
     "@eslint/js": "10.0.1",
     "@tailwindcss/vite": "4.3.4",
     "@testing-library/dom": "10.4.2",
@@ -32,11 +37,22 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.2.1",
+    "@vitest/eslint-plugin": "1.6.28",
     "eslint": "10.14.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-import-resolver-typescript": "4.4.5",
+    "eslint-plugin-import-x": "4.17.1",
+    "eslint-plugin-jest-dom": "5.10.1",
+    "eslint-plugin-jsx-a11y-x": "0.2.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-react-refresh": "0.5.7",
+    "eslint-plugin-testing-library": "7.16.2",
+    "eslint-plugin-unicorn": "79.0.0",
     "globals": "17.14.0",
     "jsdom": "31.0.0",
+    "lefthook": "2.2.2",
+    "prettier": "3.9.10",
+    "prettier-plugin-tailwindcss": "0.8.1",
     "tailwindcss": "4.3.4",
     "tw-animate-css": "1.4.0",
     "typescript": "6.0.3",
