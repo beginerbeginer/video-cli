@@ -1,17 +1,14 @@
 from dataclasses import dataclass, replace
 
+from domain.media_info import MediaInfo
 from ffmpeg.commands import build_compress_command
 from ffmpeg.probe import probe_media_info
 from shared.formatters import format_media_info_summary
 from usecases.flow_result import FlowResult
+from usecases.form_validation import form_field, require_field, validate_output_path, validate_video_input_path
 from usecases.shared_flow import execute_with_output, handle_generic_review, run_flow, run_generic_iteration
 from usecases.ui_port import UIPort
-from validation.file_validators import (
-    validate_compress_output_extension,
-    validate_input_file_exists,
-    validate_output_directory_exists,
-    validate_video_file_extension,
-)
+from validation.file_validators import validate_compress_output_extension
 from validation.value_validators import require_non_empty, validate_crf
 
 
@@ -22,34 +19,56 @@ class CompressForm:
     output_file: str = "./output-compressed.mp4"
 
 
-def collect_compress_input(form: CompressForm, ui: UIPort):
-    input_file = require_non_empty(
-        ui.ask_text("対象の動画ファイルを入力してください\n例: ./input/video.mp4", default=form.input_file),
-        "入力ファイル",
-    )
-    validate_input_file_exists(input_file)
-    validate_video_file_extension(input_file)
+def validate_compress_input_file(input_file: str) -> MediaInfo:
+    validate_video_input_path(input_file)
+    with form_field("input_file"):
+        return probe_media_info(input_file)
 
-    media_info = probe_media_info(input_file)
+
+def validate_crf_raw(raw: str) -> int:
+    require_field(raw, "CRF 値", "crf_raw")
+    with form_field("crf_raw"):
+        return validate_crf(raw, "CRF 値")
+
+
+def validate_compress_output_file(output_file: str) -> None:
+    validate_output_path(output_file)
+    with form_field("output_file"):
+        validate_compress_output_extension(output_file)
+
+
+def validate_compress_form(form: CompressForm) -> MediaInfo:
+    media_info = validate_compress_input_file(form.input_file)
+    validate_crf_raw(form.crf_raw)
+    validate_compress_output_file(form.output_file)
+    return media_info
+
+
+def build_compress_command_from_form(form: CompressForm) -> list[str]:
+    return build_compress_command(
+        input_file=form.input_file,
+        output_file=form.output_file,
+        crf=validate_crf_raw(form.crf_raw),
+    )
+
+
+def collect_compress_input(form: CompressForm, ui: UIPort):
+    # validate_compress_form を最後にまとめて呼ばないのは、CLI では入力ファイルの誤りを
+    # 次の項目を聞く前に知らせたいため。段階ごとの検証関数を聞いた直後に呼ぶ。
+    input_file = ui.ask_text("対象の動画ファイルを入力してください\n例: ./input/video.mp4", default=form.input_file)
+    media_info = validate_compress_input_file(input_file)
     print("\n入力動画情報:")
     print(format_media_info_summary(media_info))
     print()
 
-    crf_raw = require_non_empty(
-        ui.ask_text(
-            "CRF 値を入力してください\n範囲: 0〜51（低いほど高画質・大サイズ、デフォルト: 23）\n例: 23",
-            default=form.crf_raw,
-        ),
-        "CRF 値",
+    crf_raw = ui.ask_text(
+        "CRF 値を入力してください\n範囲: 0〜51（低いほど高画質・大サイズ、デフォルト: 23）\n例: 23",
+        default=form.crf_raw,
     )
-    validate_crf(crf_raw, "CRF 値")
+    validate_crf_raw(crf_raw)
 
-    output_file = require_non_empty(
-        ui.ask_text("出力ファイル名を入力してください\n例: ./output/compressed.mp4", default=form.output_file),
-        "出力ファイル",
-    )
-    validate_output_directory_exists(output_file)
-    validate_compress_output_extension(output_file)
+    output_file = ui.ask_text("出力ファイル名を入力してください\n例: ./output/compressed.mp4", default=form.output_file)
+    validate_compress_output_file(output_file)
 
     return replace(form, input_file=input_file, crf_raw=crf_raw, output_file=output_file), media_info
 
@@ -91,15 +110,7 @@ def handle_compress_review(form: CompressForm, ui: UIPort) -> FlowResult:
 
 
 def execute_compress(form: CompressForm, dry_run: bool = False) -> None:
-    crf = validate_crf(form.crf_raw, "CRF 値")
-
-    command = build_compress_command(
-        input_file=form.input_file,
-        output_file=form.output_file,
-        crf=crf,
-    )
-
-    execute_with_output(command, form.output_file, dry_run)
+    execute_with_output(build_compress_command_from_form(form), form.output_file, dry_run)
 
 
 def run_compress_iteration(form: CompressForm, ui: UIPort) -> FlowResult:

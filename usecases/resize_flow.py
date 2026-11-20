@@ -1,16 +1,13 @@
 from dataclasses import dataclass, replace
 
+from domain.media_info import MediaInfo
 from ffmpeg.commands import build_resize_command
 from ffmpeg.probe import probe_media_info
 from shared.formatters import format_media_info_summary
 from usecases.flow_result import FlowResult
+from usecases.form_validation import form_field, require_field, validate_output_path, validate_video_input_path
 from usecases.shared_flow import execute_with_output, handle_generic_review, run_flow, run_generic_iteration
 from usecases.ui_port import UIPort
-from validation.file_validators import (
-    validate_input_file_exists,
-    validate_output_directory_exists,
-    validate_video_file_extension,
-)
 from validation.value_validators import require_non_empty, validate_dimension
 
 
@@ -22,36 +19,66 @@ class ResizeForm:
     output_file: str = "./output-resized.mp4"
 
 
-def collect_resize_input(form: ResizeForm, ui: UIPort):
-    input_file = require_non_empty(
-        ui.ask_text("対象の動画ファイルを入力してください\n例: ./input/video.mp4", default=form.input_file),
-        "入力ファイル",
-    )
-    validate_input_file_exists(input_file)
-    validate_video_file_extension(input_file)
+def validate_resize_input_file(input_file: str) -> MediaInfo:
+    validate_video_input_path(input_file)
+    with form_field("input_file"):
+        return probe_media_info(input_file)
 
-    media_info = probe_media_info(input_file)
+
+def validate_resize_dimensions(width_raw: str, height_raw: str) -> tuple[int, int]:
+    require_field(width_raw, "幅", "width_raw")
+    require_field(height_raw, "高さ", "height_raw")
+    with form_field("width_raw"):
+        width = validate_dimension(width_raw, "幅")
+    with form_field("height_raw"):
+        height = validate_dimension(height_raw, "高さ")
+    return width, height
+
+
+def validate_resize_output_file(output_file: str) -> None:
+    validate_output_path(output_file)
+
+
+def validate_resize_form(form: ResizeForm) -> MediaInfo:
+    media_info = validate_resize_input_file(form.input_file)
+    validate_resize_dimensions(form.width_raw, form.height_raw)
+    validate_resize_output_file(form.output_file)
+    return media_info
+
+
+def build_resize_command_from_form(form: ResizeForm) -> list[str]:
+    width, height = validate_resize_dimensions(form.width_raw, form.height_raw)
+    return build_resize_command(
+        input_file=form.input_file,
+        output_file=form.output_file,
+        width=width,
+        height=height,
+    )
+
+
+def collect_resize_input(form: ResizeForm, ui: UIPort):
+    # validate_resize_form を最後にまとめて呼ばないのは、CLI では入力ファイルの誤りを
+    # 次の項目を聞く前に知らせたいため。段階ごとの検証関数を聞いた直後に呼ぶ。
+    input_file = ui.ask_text("対象の動画ファイルを入力してください\n例: ./input/video.mp4", default=form.input_file)
+    media_info = validate_resize_input_file(input_file)
     print("\n入力動画情報:")
     print(format_media_info_summary(media_info))
     print()
 
-    width_raw = require_non_empty(
+    width_raw = require_field(
         ui.ask_text("幅を入力してください\n整数: 16〜7680\n例: 1280", default=form.width_raw),
         "幅",
+        "width_raw",
     )
-    height_raw = require_non_empty(
+    height_raw = require_field(
         ui.ask_text("高さを入力してください\n整数: 16〜7680\n例: 720", default=form.height_raw),
         "高さ",
+        "height_raw",
     )
+    validate_resize_dimensions(width_raw, height_raw)
 
-    validate_dimension(width_raw, "幅")
-    validate_dimension(height_raw, "高さ")
-
-    output_file = require_non_empty(
-        ui.ask_text("出力ファイル名を入力してください\n例: ./output/resized.mp4", default=form.output_file),
-        "出力ファイル",
-    )
-    validate_output_directory_exists(output_file)
+    output_file = ui.ask_text("出力ファイル名を入力してください\n例: ./output/resized.mp4", default=form.output_file)
+    validate_resize_output_file(output_file)
 
     return (
         replace(form, input_file=input_file, width_raw=width_raw, height_raw=height_raw, output_file=output_file),
@@ -102,17 +129,7 @@ def handle_resize_review(form: ResizeForm, ui: UIPort) -> FlowResult:
 
 
 def execute_resize(form: ResizeForm, dry_run: bool = False) -> None:
-    width = validate_dimension(form.width_raw, "幅")
-    height = validate_dimension(form.height_raw, "高さ")
-
-    command = build_resize_command(
-        input_file=form.input_file,
-        output_file=form.output_file,
-        width=width,
-        height=height,
-    )
-
-    execute_with_output(command, form.output_file, dry_run)
+    execute_with_output(build_resize_command_from_form(form), form.output_file, dry_run)
 
 
 def run_resize_iteration(form: ResizeForm, ui: UIPort) -> FlowResult:

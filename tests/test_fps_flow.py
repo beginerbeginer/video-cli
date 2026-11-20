@@ -1,14 +1,18 @@
 import unittest
+from dataclasses import replace
 from unittest.mock import ANY, Mock, patch
 
+from ffmpeg.commands import build_fps_command
 from shared.errors import ValidationError
 from tests.form_test_support import FormWorkspace, asked_prompts, make_media_info, make_ui
 from usecases.flow_result import FlowResult
 from usecases.fps_flow import (
     FpsForm,
+    build_fps_command_from_form,
     collect_fps_input,
     execute_fps,
     run_fps_iteration,
+    validate_fps_form,
 )
 
 
@@ -134,6 +138,65 @@ class TestCollectFpsInput(unittest.TestCase):
         with self.assertRaises(ValidationError):
             collect_fps_input(FpsForm(), ui)
         self.assertEqual(asked_prompts(ui), self.PROMPTS)
+
+
+class TestValidateFpsForm(unittest.TestCase):
+    def setUp(self):
+        self.ws = FormWorkspace()
+        self.addCleanup(self.ws.cleanup)
+        patcher = patch("usecases.fps_flow.probe_media_info", return_value=make_media_info())
+        self.mock_probe = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def valid_form(self, **overrides) -> FpsForm:
+        form = FpsForm(input_file=self.ws.input_file, fps_raw="30", output_file=self.ws.output())
+        return replace(form, **overrides)
+
+    def test_returns_media_info_without_ui(self):
+        media_info = validate_fps_form(self.valid_form())
+        self.assertEqual(media_info, self.mock_probe.return_value)
+        self.mock_probe.assert_called_once_with(self.ws.input_file)
+
+    def test_error_field_is_form_field_name(self):
+        cases = [
+            ({"input_file": ""}, "input_file"),
+            ({"input_file": self.ws.missing_input}, "input_file"),
+            ({"input_file": str(self.ws.root / "in.txt")}, "input_file"),
+            ({"fps_raw": " "}, "fps_raw"),
+            ({"fps_raw": "abc"}, "fps_raw"),
+            ({"fps_raw": "0"}, "fps_raw"),
+            ({"fps_raw": "121"}, "fps_raw"),
+            ({"output_file": ""}, "output_file"),
+            ({"output_file": self.ws.output_in_missing_dir}, "output_file"),
+            ({"output_file": self.ws.output("out.txt")}, "output_file"),
+        ]
+        (self.ws.root / "in.txt").write_text("")
+        for overrides, expected_field in cases:
+            with self.subTest(overrides=overrides):
+                with self.assertRaises(ValidationError) as ctx:
+                    validate_fps_form(self.valid_form(**overrides))
+                self.assertEqual(ctx.exception.field, expected_field)
+
+    def test_probe_failure_is_tagged_input_file(self):
+        self.mock_probe.side_effect = ValidationError("ffprobe でメディア情報を取得できませんでした")
+        with self.assertRaises(ValidationError) as ctx:
+            validate_fps_form(self.valid_form())
+        self.assertEqual(ctx.exception.field, "input_file")
+
+
+class TestBuildFpsCommandFromForm(unittest.TestCase):
+    def test_matches_build_fps_command(self):
+        form = FpsForm(input_file="in.mp4", fps_raw="30", output_file="out.mp4")
+        self.assertEqual(
+            build_fps_command_from_form(form),
+            build_fps_command(input_file="in.mp4", output_file="out.mp4", fps=30.0),
+        )
+
+    def test_invalid_value_raises_with_field(self):
+        form = FpsForm(input_file="in.mp4", fps_raw="abc", output_file="out.mp4")
+        with self.assertRaises(ValidationError) as ctx:
+            build_fps_command_from_form(form)
+        self.assertEqual(ctx.exception.field, "fps_raw")
 
 
 if __name__ == "__main__":

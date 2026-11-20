@@ -1,13 +1,17 @@
 import unittest
+from dataclasses import replace
 from unittest.mock import ANY, Mock, patch
 
+from ffmpeg.commands import build_compress_command
 from shared.errors import ValidationError
 from tests.form_test_support import FormWorkspace, asked_prompts, make_media_info, make_ui
 from usecases.compress_flow import (
     CompressForm,
+    build_compress_command_from_form,
     collect_compress_input,
     execute_compress,
     run_compress_iteration,
+    validate_compress_form,
 )
 from usecases.flow_result import FlowResult
 
@@ -134,6 +138,67 @@ class TestCollectCompressInput(unittest.TestCase):
         with self.assertRaises(ValidationError):
             collect_compress_input(CompressForm(), ui)
         self.assertEqual(asked_prompts(ui), self.PROMPTS)
+
+
+class TestValidateCompressForm(unittest.TestCase):
+    def setUp(self):
+        self.ws = FormWorkspace()
+        self.addCleanup(self.ws.cleanup)
+        patcher = patch("usecases.compress_flow.probe_media_info", return_value=make_media_info())
+        self.mock_probe = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def valid_form(self, **overrides) -> CompressForm:
+        form = CompressForm(input_file=self.ws.input_file, crf_raw="23", output_file=self.ws.output())
+        return replace(form, **overrides)
+
+    def test_returns_media_info_without_ui(self):
+        media_info = validate_compress_form(self.valid_form())
+        self.assertEqual(media_info, self.mock_probe.return_value)
+        self.mock_probe.assert_called_once_with(self.ws.input_file)
+
+    def test_error_field_is_form_field_name(self):
+        cases = [
+            ({"input_file": ""}, "input_file"),
+            ({"input_file": self.ws.missing_input}, "input_file"),
+            ({"input_file": str(self.ws.root / "in.txt")}, "input_file"),
+            ({"crf_raw": " "}, "crf_raw"),
+            ({"crf_raw": "abc"}, "crf_raw"),
+            ({"crf_raw": "1.5"}, "crf_raw"),
+            ({"crf_raw": "-1"}, "crf_raw"),
+            ({"crf_raw": "52"}, "crf_raw"),
+            ({"output_file": ""}, "output_file"),
+            ({"output_file": self.ws.output_in_missing_dir}, "output_file"),
+            ({"output_file": self.ws.output("out.webm")}, "output_file"),
+            ({"output_file": self.ws.output("out.avi")}, "output_file"),
+        ]
+        (self.ws.root / "in.txt").write_text("")
+        for overrides, expected_field in cases:
+            with self.subTest(overrides=overrides):
+                with self.assertRaises(ValidationError) as ctx:
+                    validate_compress_form(self.valid_form(**overrides))
+                self.assertEqual(ctx.exception.field, expected_field)
+
+    def test_probe_failure_is_tagged_input_file(self):
+        self.mock_probe.side_effect = ValidationError("ffprobe でメディア情報を取得できませんでした")
+        with self.assertRaises(ValidationError) as ctx:
+            validate_compress_form(self.valid_form())
+        self.assertEqual(ctx.exception.field, "input_file")
+
+
+class TestBuildCompressCommandFromForm(unittest.TestCase):
+    def test_matches_build_compress_command(self):
+        form = CompressForm(input_file="in.mp4", crf_raw="23", output_file="out.mp4")
+        self.assertEqual(
+            build_compress_command_from_form(form),
+            build_compress_command(input_file="in.mp4", output_file="out.mp4", crf=23),
+        )
+
+    def test_invalid_value_raises_with_field(self):
+        form = CompressForm(input_file="in.mp4", crf_raw="abc", output_file="out.mp4")
+        with self.assertRaises(ValidationError) as ctx:
+            build_compress_command_from_form(form)
+        self.assertEqual(ctx.exception.field, "crf_raw")
 
 
 if __name__ == "__main__":

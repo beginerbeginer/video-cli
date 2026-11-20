@@ -1,15 +1,19 @@
 import unittest
+from dataclasses import replace
 from unittest.mock import ANY, Mock, patch
 
+from ffmpeg.commands import build_resize_command
 from shared.errors import ValidationError
 from tests.form_test_support import FormWorkspace, asked_prompts, make_media_info, make_ui
 from usecases.flow_result import FlowResult
 from usecases.resize_flow import (
     ResizeForm,
+    build_resize_command_from_form,
     collect_resize_input,
     execute_resize,
     handle_resize_review,
     run_resize_iteration,
+    validate_resize_form,
 )
 
 
@@ -196,6 +200,64 @@ class TestCollectResizeInput(unittest.TestCase):
         with self.assertRaises(ValidationError):
             collect_resize_input(ResizeForm(), ui)
         self.assertEqual(asked_prompts(ui), self.PROMPTS)
+
+
+class TestValidateResizeForm(unittest.TestCase):
+    def setUp(self):
+        self.ws = FormWorkspace()
+        self.addCleanup(self.ws.cleanup)
+        patcher = patch("usecases.resize_flow.probe_media_info", return_value=make_media_info())
+        self.mock_probe = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def valid_form(self, **overrides) -> ResizeForm:
+        form = ResizeForm(
+            input_file=self.ws.input_file, width_raw="640", height_raw="360", output_file=self.ws.output()
+        )
+        return replace(form, **overrides)
+
+    def test_returns_media_info_without_ui(self):
+        media_info = validate_resize_form(self.valid_form())
+        self.assertEqual(media_info, self.mock_probe.return_value)
+
+    def test_error_field_is_form_field_name(self):
+        cases = [
+            ({"input_file": ""}, "input_file"),
+            ({"input_file": self.ws.missing_input}, "input_file"),
+            ({"width_raw": ""}, "width_raw"),
+            ({"width_raw": "abc"}, "width_raw"),
+            ({"width_raw": "15"}, "width_raw"),
+            ({"height_raw": ""}, "height_raw"),
+            ({"height_raw": "7681"}, "height_raw"),
+            ({"output_file": " "}, "output_file"),
+            ({"output_file": self.ws.output_in_missing_dir}, "output_file"),
+        ]
+        for overrides, expected_field in cases:
+            with self.subTest(overrides=overrides):
+                with self.assertRaises(ValidationError) as ctx:
+                    validate_resize_form(self.valid_form(**overrides))
+                self.assertEqual(ctx.exception.field, expected_field)
+
+    def test_probe_failure_is_tagged_input_file(self):
+        self.mock_probe.side_effect = ValidationError("ffprobe でメディア情報を取得できませんでした")
+        with self.assertRaises(ValidationError) as ctx:
+            validate_resize_form(self.valid_form())
+        self.assertEqual(ctx.exception.field, "input_file")
+
+
+class TestBuildResizeCommandFromForm(unittest.TestCase):
+    def test_matches_build_resize_command(self):
+        form = ResizeForm(input_file="in.mp4", width_raw="640", height_raw="360", output_file="out.mp4")
+        self.assertEqual(
+            build_resize_command_from_form(form),
+            build_resize_command(input_file="in.mp4", output_file="out.mp4", width=640, height=360),
+        )
+
+    def test_invalid_height_raises_with_field(self):
+        form = ResizeForm(input_file="in.mp4", width_raw="640", height_raw="abc", output_file="out.mp4")
+        with self.assertRaises(ValidationError) as ctx:
+            build_resize_command_from_form(form)
+        self.assertEqual(ctx.exception.field, "height_raw")
 
 
 if __name__ == "__main__":

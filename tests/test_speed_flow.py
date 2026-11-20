@@ -1,15 +1,19 @@
 import unittest
+from dataclasses import replace
 from unittest.mock import ANY, Mock, patch
 
+from ffmpeg.commands import build_speed_command
 from shared.errors import ValidationError
 from tests.form_test_support import FormWorkspace, asked_prompts, make_media_info, make_ui
 from usecases.flow_result import FlowResult
 from usecases.speed_flow import (
     SpeedForm,
+    build_speed_command_from_form,
     collect_speed_input,
     execute_speed,
     handle_speed_review,
     run_speed_iteration,
+    validate_speed_form,
 )
 
 
@@ -179,6 +183,65 @@ class TestCollectSpeedInput(unittest.TestCase):
         with self.assertRaises(ValidationError):
             collect_speed_input(SpeedForm(), ui)
         self.assertEqual(asked_prompts(ui), self.PROMPTS)
+
+
+class TestValidateSpeedForm(unittest.TestCase):
+    def setUp(self):
+        self.ws = FormWorkspace()
+        self.addCleanup(self.ws.cleanup)
+        patcher = patch("usecases.speed_flow.probe_media_info", return_value=make_media_info())
+        self.mock_probe = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def valid_form(self, **overrides) -> SpeedForm:
+        form = SpeedForm(input_file=self.ws.input_file, speed_raw="2.0", output_file=self.ws.output())
+        return replace(form, **overrides)
+
+    def test_returns_media_info_without_ui(self):
+        media_info = validate_speed_form(self.valid_form())
+        self.assertEqual(media_info, self.mock_probe.return_value)
+        self.mock_probe.assert_called_once_with(self.ws.input_file)
+
+    def test_error_field_is_form_field_name(self):
+        cases = [
+            ({"input_file": ""}, "input_file"),
+            ({"input_file": self.ws.missing_input}, "input_file"),
+            ({"input_file": str(self.ws.root / "in.txt")}, "input_file"),
+            ({"speed_raw": " "}, "speed_raw"),
+            ({"speed_raw": "abc"}, "speed_raw"),
+            ({"speed_raw": "0.2"}, "speed_raw"),
+            ({"speed_raw": "4.5"}, "speed_raw"),
+            ({"speed_raw": "inf"}, "speed_raw"),
+            ({"output_file": ""}, "output_file"),
+            ({"output_file": self.ws.output_in_missing_dir}, "output_file"),
+        ]
+        (self.ws.root / "in.txt").write_text("")
+        for overrides, expected_field in cases:
+            with self.subTest(overrides=overrides):
+                with self.assertRaises(ValidationError) as ctx:
+                    validate_speed_form(self.valid_form(**overrides))
+                self.assertEqual(ctx.exception.field, expected_field)
+
+    def test_probe_failure_is_tagged_input_file(self):
+        self.mock_probe.side_effect = ValidationError("ffprobe でメディア情報を取得できませんでした")
+        with self.assertRaises(ValidationError) as ctx:
+            validate_speed_form(self.valid_form())
+        self.assertEqual(ctx.exception.field, "input_file")
+
+
+class TestBuildSpeedCommandFromForm(unittest.TestCase):
+    def test_matches_build_speed_command(self):
+        form = SpeedForm(input_file="in.mp4", speed_raw="2.0", output_file="out.mp4")
+        self.assertEqual(
+            build_speed_command_from_form(form),
+            build_speed_command(input_file="in.mp4", output_file="out.mp4", speed=2.0),
+        )
+
+    def test_invalid_value_raises_with_field(self):
+        form = SpeedForm(input_file="in.mp4", speed_raw="abc", output_file="out.mp4")
+        with self.assertRaises(ValidationError) as ctx:
+            build_speed_command_from_form(form)
+        self.assertEqual(ctx.exception.field, "speed_raw")
 
 
 if __name__ == "__main__":

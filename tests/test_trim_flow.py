@@ -1,15 +1,20 @@
 import unittest
+from dataclasses import replace
 from unittest.mock import ANY, Mock, patch
 
+from domain.trim_range import TrimRange
+from ffmpeg.commands import build_trim_command
 from shared.errors import ValidationError
 from tests.form_test_support import FormWorkspace, asked_prompts, make_media_info, make_ui
 from usecases.flow_result import FlowResult
 from usecases.trim_flow import (
     TrimForm,
+    build_trim_command_from_form,
     collect_trim_input,
     execute_trim,
     handle_trim_review,
     run_trim_iteration,
+    validate_trim_form,
 )
 
 
@@ -207,6 +212,69 @@ class TestCollectTrimInput(unittest.TestCase):
         with self.assertRaises(ValidationError):
             collect_trim_input(TrimForm(), ui)
         self.assertEqual(asked_prompts(ui), self.PROMPTS)
+
+
+class TestValidateTrimForm(unittest.TestCase):
+    def setUp(self):
+        self.ws = FormWorkspace()
+        self.addCleanup(self.ws.cleanup)
+        patcher = patch("usecases.trim_flow.probe_media_info", return_value=make_media_info(duration_seconds=60.0))
+        self.mock_probe = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def valid_form(self, **overrides) -> TrimForm:
+        form = TrimForm(input_file=self.ws.input_file, start_raw="10", end_raw="00:00:20", output_file=self.ws.output())
+        return replace(form, **overrides)
+
+    def test_returns_media_info_without_ui(self):
+        media_info = validate_trim_form(self.valid_form())
+        self.assertEqual(media_info.duration_seconds, 60.0)
+        self.mock_probe.assert_called_once_with(self.ws.input_file)
+
+    def test_end_equal_to_duration_is_allowed(self):
+        validate_trim_form(self.valid_form(end_raw="60"))
+
+    def test_error_field_is_form_field_name(self):
+        cases = [
+            ({"input_file": ""}, "input_file"),
+            ({"input_file": self.ws.missing_input}, "input_file"),
+            ({"input_file": str(self.ws.root / "in.txt")}, "input_file"),
+            ({"start_raw": ""}, "start_raw"),
+            ({"start_raw": "1:30"}, "start_raw"),
+            ({"end_raw": " "}, "end_raw"),
+            ({"end_raw": "abc"}, "end_raw"),
+            ({"start_raw": "20", "end_raw": "10"}, "start_raw"),
+            ({"end_raw": "61"}, "end_raw"),
+            ({"output_file": ""}, "output_file"),
+            ({"output_file": self.ws.output_in_missing_dir}, "output_file"),
+        ]
+        (self.ws.root / "in.txt").write_text("")
+        for overrides, expected_field in cases:
+            with self.subTest(overrides=overrides):
+                with self.assertRaises(ValidationError) as ctx:
+                    validate_trim_form(self.valid_form(**overrides))
+                self.assertEqual(ctx.exception.field, expected_field)
+
+    def test_probe_failure_is_tagged_input_file(self):
+        self.mock_probe.side_effect = ValidationError("ffprobe でメディア情報を取得できませんでした")
+        with self.assertRaises(ValidationError) as ctx:
+            validate_trim_form(self.valid_form())
+        self.assertEqual(ctx.exception.field, "input_file")
+
+
+class TestBuildTrimCommandFromForm(unittest.TestCase):
+    def test_matches_build_trim_command(self):
+        form = TrimForm(input_file="in.mp4", start_raw="00:00:10", end_raw="20", output_file="out.mp4")
+        self.assertEqual(
+            build_trim_command_from_form(form),
+            build_trim_command(input_file="in.mp4", output_file="out.mp4", trim_range=TrimRange.create(10, 20)),
+        )
+
+    def test_invalid_end_raises_with_field(self):
+        form = TrimForm(input_file="in.mp4", start_raw="10", end_raw="abc", output_file="out.mp4")
+        with self.assertRaises(ValidationError) as ctx:
+            build_trim_command_from_form(form)
+        self.assertEqual(ctx.exception.field, "end_raw")
 
 
 if __name__ == "__main__":
