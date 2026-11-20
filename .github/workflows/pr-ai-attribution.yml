@@ -1,0 +1,44 @@
+name: pr-ai-attribution
+
+on:
+  pull_request:
+    branches: [main]
+    # edited を含めるのは、人が本文を書き換えて区画を消しても書き戻すため。
+    # GITHUB_TOKEN による本文の更新は新しいワークフローを起動しないので、ループはしない。
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-ai-attribution-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  attribution:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: PR のコミットメッセージを集める
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git log -z --no-merges --format=%B "$BASE_SHA..$HEAD_SHA" > "$RUNNER_TEMP/commits.log"
+      - name: 今の PR 本文を取得する
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh pr view "$PR" --json body --jq .body > "$RUNNER_TEMP/body.md"
+      - name: 区画を書き込んだ本文を作る
+        run: python3 scripts/pr_ai_attribution.py "$RUNNER_TEMP/commits.log" "$RUNNER_TEMP/body.md" > "$RUNNER_TEMP/new_body.md"
+      - name: 本文が変わったときだけ PR を更新する
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if ! cmp -s "$RUNNER_TEMP/body.md" "$RUNNER_TEMP/new_body.md"; then
+            gh pr edit "$PR" --body-file "$RUNNER_TEMP/new_body.md"
+          fi
