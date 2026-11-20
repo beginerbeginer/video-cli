@@ -131,6 +131,7 @@ cd frontend && npm run storybook
 | `npm run format:check` | 整形されているかだけを確かめる |
 | `npm test` | テスト（Vitest） |
 | `npm run build` | 型チェックしてから本番用にビルドする（`dist/`） |
+| `npm run build-storybook` | Storybook を静的なファイルに書き出す（`storybook-static/`） |
 
 コミットすると、lefthook が変更した frontend のファイルに ESLint の自動修正・Prettier の整形・型チェックをかける。違反が残っているとコミットは止まる。設定はリポジトリ直下の `lefthook.yml`、細かいルールは `frontend/README.md` にある。
 
