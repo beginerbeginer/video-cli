@@ -60,6 +60,17 @@ main.py        ← エントリーポイント・ディスパッチ
 
 さらに `domain/operations.py`・`ui/main_menu.py`・`main.py` の3箇所を更新する。
 
+### フロントエンド（`frontend/`）の UI
+
+UI は「部品を Storybook で先に作る → 画面で組み合わせる」の順で作る。詳しくは `frontend/README.md`。
+
+| 段階 | ファイル | 役割 |
+|------|---------|------|
+| 1. 部品を決める | `frontend/src/docs/component-catalog.ts` | 部品を「予定」として一覧に載せる |
+| 2. 部品を作る | `frontend/src/components/**/xxx.stories.tsx` | 状態ごとのストーリーと `play` 関数（テスト）を先に書く |
+| | `frontend/src/components/**/xxx.tsx` | 表示だけを担当する。データは props で受け取り、API は呼ばない |
+| 3. 画面で使う | 画面側の issue | API の呼び出しと部品の組み合わせを行う。一覧の状態を更新する |
+
 ## コミットメッセージのルール
 
 **1 行目は `種類: 日本語の要約` にする（[Conventional Commits](https://www.conventionalcommits.org/ja/v1.0.0/)）。**  

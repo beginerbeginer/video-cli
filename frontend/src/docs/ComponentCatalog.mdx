@@ -1,0 +1,26 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+import { componentCatalog } from "./component-catalog";
+import { ComponentCatalogTable } from "./ComponentCatalogTable";
+
+<Meta title="はじめに/コンポーネント一覧" />
+
+# コンポーネント一覧
+
+GUI で使う UI 部品と、その部品を作る issue・画面で使う issue の一覧です。
+
+- **予定**: まだ作っていない
+- **作成済み**: Storybook にストーリーがあり、テストが通っている
+- **画面で使用中**: 画面に組み込まれ、API とつながっている
+
+部品を作ったり画面に組み込んだりしたら、`src/docs/component-catalog.ts` の `status` を更新してください。
+（この表はそのデータから作られます。載せ忘れや状態の書き間違いはテストで検出されます）
+
+<ComponentCatalogTable entries={componentCatalog} />
+
+## 開発の流れ
+
+1. 作る部品をこの一覧に「予定」として載せる
+2. Storybook でストーリーを書き、状態ごとの見た目とテストを固める（→「作成済み」）
+3. 画面側の issue で、部品を組み合わせて API とつなぐ（→「画面で使用中」）
+
+詳しくは `frontend/README.md` を見てください。
