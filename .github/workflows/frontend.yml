@@ -12,6 +12,11 @@ on:
       - "frontend/**"
       - ".github/workflows/frontend.yml"
 
+# 既定値に任せると、リポジトリ設定しだいで書き込み権限つきのトークンが渡る。
+# npm ci で外部パッケージのインストール処理が動くので、チェックアウトに要る読み取りだけに絞る。
+permissions:
+  contents: read
+
 jobs:
   frontend:
     runs-on: ubuntu-latest
