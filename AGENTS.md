@@ -193,14 +193,38 @@ release-please を入れる前（2026-05-22）に、手で作ったタグが 2 �
 - リポジトリの Settings → Actions → General の「Allow GitHub Actions to create and approve pull requests」が無効だと、リリース用の PR を作れない
 - 別のファイルのバージョンも書き換えたいとき（例: `frontend/package.json`）は、`release-please-config.json` の `packages["."].extra-files` に `{ "type": "json", "path": "frontend/package.json", "jsonpath": "$.version" }` を足す。そのファイルの今のバージョンは `.release-please-manifest.json` と同じにしておく
 
-### 注意: リリース用の PR では CI が自動で動かない
+### リリース用の PR で CI を動かすトークン（`RELEASE_PLEASE_TOKEN`）
 
-release-please は `GITHUB_TOKEN` でリリース用の PR を作る。GitHub の制限で、`GITHUB_TOKEN` が起こした操作からはほかのワークフロー（`test` や `conventional-commits`）が起動しない。リリース用の PR はバージョンと CHANGELOG だけを変えるので、今はこのままでよい。
+GitHub の制限で、`GITHUB_TOKEN` が起こした操作（PR の作成や push）からは、ほかのワークフロー（`test` や `conventional-commits`）が起動しない。このリポジトリは CI が通らないとマージできないので、`GITHUB_TOKEN` で作ったリリース用の PR は blocked のまま止まる。
 
-CI を動かしたくなったときの対処:
+そこでワークフロー `release-please` は、リポジトリの Secret `RELEASE_PLEASE_TOKEN` を `release-please-action` の `token` に渡す。Secret が無いときは `GITHUB_TOKEN` に戻るので、ワークフロー自体は今までどおり動く（ただし CI は動かない）。
 
-- 手早く済ませるなら: リリース用の PR のブランチに、人が空でないコミットを 1 つ push する（人の操作なので CI が動く）
-- 恒久的には: GitHub App のトークン（`actions/create-github-app-token`）か、権限を絞った fine-grained personal access token をシークレットに登録し、`release-please-action` の `token` に渡す
+- Secret を使うのは、main への push と手動実行で動く `release-please` のワークフローだけ。PR で動くワークフローには Secret を渡さない（外部からの PR で読まれないようにするため）。`tests/test_release_please_config.py` がこれを確かめる
+
+**トークンの作り方**（オーナーが行う）
+
+1. GitHub の Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token
+2. 次の設定にする。有効期限も決める
+
+   | 項目 | 設定 |
+   |---|---|
+   | 対象のリポジトリ | このリポジトリだけ（Only select repositories） |
+   | Contents | Read and write |
+   | Pull requests | Read and write |
+   | Issues | Read and write（リリース用の PR に付けるラベルの作成に使う） |
+
+3. リポジトリの Settings → Secrets and variables → Actions → New repository secret で、名前を `RELEASE_PLEASE_TOKEN` にして登録する
+
+**期限が切れたとき**
+
+トークンには有効期限がある。期限が切れたら、上の手順でトークンを作り直し、同じ名前 `RELEASE_PLEASE_TOKEN` の Secret の値を更新する（Settings → Secrets and variables → Actions → `RELEASE_PLEASE_TOKEN` → Update）。そのあとワークフローを手動実行すると、リリース用の PR が新しいトークンで更新される。
+
+**トークンが無い・期限切れのときの症状と、その場しのぎの対処**
+
+- 症状: Secret が無ければ `GITHUB_TOKEN` に戻るので、リリース用の PR は作られるが CI が動かず blocked になる。期限切れのトークンが登録されたままだと、`release-please` のワークフローが認証エラーで失敗する
+- その場しのぎ:
+  - リリース用の PR を閉じて開き直す（人の操作なので CI が動く）
+  - または、管理者として条件を待たずにマージする（リリース用の PR はバージョンと CHANGELOG だけを変える）
 
 ## コードコメントのルール
 
