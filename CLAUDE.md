@@ -156,6 +156,23 @@ How（どう変えたか）はコードを見ればわかるので書かない�
 - 今は `0.x` の段階。互換性を壊す変更でも、1.0.0 になるまではマイナーを上げる（`release-please-config.json` の `bump-minor-pre-major`）
 - GUI 刷新（#82）が終わった時点（#99 のマージ後）で `1.0.0` を出す。そのときは、コミットの本文に `Release-As: 1.0.0` と書いたコミットを main に入れる
 
+### 既存のタグの扱いと、バージョンが食い違ったときの直し方
+
+release-please を入れる前（2026-05-22）に、手で作ったタグが 2 つある。`v0.2.0`（GitHub Releases あり）と `v0.3.0`（タグだけ）。このタグは消さない・付け替えない。
+
+- release-please は、`.release-please-manifest.json` の版と同じ名前の GitHub Releases を「前回のリリース」として探し、無ければ同じ名前の Git タグを探す。見つかれば、そこから後のコミットで次の版を決める。このときは `bootstrap-sha` を使わない
+- 今はマニフェストが `0.3.0` なので、前回のリリースはタグ `v0.3.0` になる。下の「リリースの手順」の 5 にある「出発点は `0.1.0`」「`bootstrap-sha` より前を含めない」は、タグが見つからないときだけの動きで、今は当てはまらない
+- マニフェストの版が既存のタグより古いと、release-please は既存のタグと同じ版を作ろうとして、`Duplicate release tag` で失敗する（#118 のマージ後に起きた失敗がこれ。#124 で直した）
+- `tests/test_release_please_config.py` が、マニフェストが既存のタグより古くならないこと、`pyproject.toml`・`uv.lock` と同じ版であることを確かめる。手で作ったタグはテストの `MANUAL_RELEASE_TAGS` にも書いてある（CI はタグを取ってこないため）
+
+食い違ったときの直し方:
+
+1. `git fetch origin --tags` でタグを取ってきてから、`git tag -l` で最新のタグを確かめる。タグを取らずに調べると、既存のタグを見落とす
+2. `.release-please-manifest.json`・`pyproject.toml`・`uv.lock`（video-cli の行）を、最新のタグの版にそろえる
+3. `CHANGELOG.md` に、既存のタグと同じかそれより古い版の項目ができていたら消す。その変更は、次の版の項目に載る
+4. コミットの種類は `chore` か `ci` にする。`feat` や `fix` にすると、release-please がそれを機能や修正として数えてしまう
+5. 次の版を決まりと違う番号にしたいときだけ、コミットの本文に `Release-As: x.y.z` を書く。マニフェストを直せば、ふつうは要らない
+
 ### リリースの手順（release-please）
 
 1. PR を main にマージすると、ワークフロー `release-please` が動き、次のバージョンと `CHANGELOG.md` の更新を書いた「リリース用の PR」（タイトルは `chore(main): release 0.x.y`）を作る。すでにあれば内容を更新する
