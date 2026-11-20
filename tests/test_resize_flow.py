@@ -1,9 +1,12 @@
 import unittest
 from unittest.mock import ANY, Mock, patch
 
+from shared.errors import ValidationError
+from tests.form_test_support import FormWorkspace, asked_prompts, make_media_info, make_ui
 from usecases.flow_result import FlowResult
 from usecases.resize_flow import (
     ResizeForm,
+    collect_resize_input,
     execute_resize,
     handle_resize_review,
     run_resize_iteration,
@@ -145,6 +148,54 @@ class TestRunResizeIteration(unittest.TestCase):
         result = run_resize_iteration(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, form)
+
+
+class TestCollectResizeInput(unittest.TestCase):
+    """CLI の質問の順番と、エラーを出すタイミングを固定する。"""
+
+    PROMPTS = [
+        "対象の動画ファイルを入力してください",
+        "幅を入力してください",
+        "高さを入力してください",
+        "出力ファイル名を入力してください",
+    ]
+
+    def setUp(self):
+        self.ws = FormWorkspace()
+        self.addCleanup(self.ws.cleanup)
+        patcher = patch("usecases.resize_flow.probe_media_info", return_value=make_media_info())
+        self.mock_probe = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_asks_in_order_and_returns_form(self):
+        ui = make_ui([self.ws.input_file, "640", "360", self.ws.output()])
+        form, _media_info = collect_resize_input(ResizeForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS)
+        self.assertEqual((form.width_raw, form.height_raw), ("640", "360"))
+
+    def test_missing_input_file_fails_before_asking_width(self):
+        ui = make_ui([self.ws.missing_input])
+        with self.assertRaises(ValidationError):
+            collect_resize_input(ResizeForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS[:1])
+
+    def test_empty_width_fails_before_asking_height(self):
+        ui = make_ui([self.ws.input_file, ""])
+        with self.assertRaises(ValidationError):
+            collect_resize_input(ResizeForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS[:2])
+
+    def test_out_of_range_width_fails_after_asking_height(self):
+        ui = make_ui([self.ws.input_file, "8", "360"])
+        with self.assertRaises(ValidationError):
+            collect_resize_input(ResizeForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS[:3])
+
+    def test_missing_output_directory_fails_after_asking_output(self):
+        ui = make_ui([self.ws.input_file, "640", "360", self.ws.output_in_missing_dir])
+        with self.assertRaises(ValidationError):
+            collect_resize_input(ResizeForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS)
 
 
 if __name__ == "__main__":

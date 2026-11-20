@@ -1,9 +1,12 @@
 import unittest
 from unittest.mock import ANY, Mock, patch
 
+from shared.errors import ValidationError
+from tests.form_test_support import FormWorkspace, asked_prompts, make_media_info, make_ui
 from usecases.flow_result import FlowResult
 from usecases.trim_flow import (
     TrimForm,
+    collect_trim_input,
     execute_trim,
     handle_trim_review,
     run_trim_iteration,
@@ -147,6 +150,63 @@ class TestRunTrimIteration(unittest.TestCase):
         result = run_trim_iteration(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, form)
+
+
+class TestCollectTrimInput(unittest.TestCase):
+    """CLI の質問の順番と、エラーを出すタイミングを固定する。"""
+
+    PROMPTS = [
+        "対象の動画ファイルを入力してください",
+        "開始時間を入力してください",
+        "終了時間を入力してください",
+        "出力ファイル名を入力してください",
+    ]
+
+    def setUp(self):
+        self.ws = FormWorkspace()
+        self.addCleanup(self.ws.cleanup)
+        patcher = patch("usecases.trim_flow.probe_media_info", return_value=make_media_info(duration_seconds=60.0))
+        self.mock_probe = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_asks_in_order_and_returns_form_and_media_info(self):
+        ui = make_ui([self.ws.input_file, "10", "00:00:20", self.ws.output()])
+        form, media_info = collect_trim_input(TrimForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS)
+        self.assertEqual(form.start_raw, "10")
+        self.assertEqual(form.end_raw, "00:00:20")
+        self.assertEqual(media_info.duration_seconds, 60.0)
+
+    def test_missing_input_file_fails_before_asking_start(self):
+        ui = make_ui([self.ws.missing_input])
+        with self.assertRaises(ValidationError):
+            collect_trim_input(TrimForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS[:1])
+        self.mock_probe.assert_not_called()
+
+    def test_empty_start_fails_before_asking_end(self):
+        ui = make_ui([self.ws.input_file, " "])
+        with self.assertRaises(ValidationError):
+            collect_trim_input(TrimForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS[:2])
+
+    def test_invalid_start_format_fails_after_asking_end(self):
+        ui = make_ui([self.ws.input_file, "abc", "20"])
+        with self.assertRaises(ValidationError):
+            collect_trim_input(TrimForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS[:3])
+
+    def test_end_over_duration_fails_before_asking_output(self):
+        ui = make_ui([self.ws.input_file, "10", "61"])
+        with self.assertRaises(ValidationError):
+            collect_trim_input(TrimForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS[:3])
+
+    def test_missing_output_directory_fails_after_asking_output(self):
+        ui = make_ui([self.ws.input_file, "10", "20", self.ws.output_in_missing_dir])
+        with self.assertRaises(ValidationError):
+            collect_trim_input(TrimForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS)
 
 
 if __name__ == "__main__":

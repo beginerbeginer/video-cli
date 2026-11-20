@@ -1,9 +1,12 @@
 import unittest
 from unittest.mock import ANY, Mock, patch
 
+from shared.errors import ValidationError
+from tests.form_test_support import FormWorkspace, asked_prompts, make_media_info, make_ui
 from usecases.flow_result import FlowResult
 from usecases.speed_flow import (
     SpeedForm,
+    collect_speed_input,
     execute_speed,
     handle_speed_review,
     run_speed_iteration,
@@ -134,6 +137,48 @@ class TestRunSpeedIteration(unittest.TestCase):
         result = run_speed_iteration(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, form)
+
+
+class TestCollectSpeedInput(unittest.TestCase):
+    """CLI の質問の順番と、エラーを出すタイミングを固定する。"""
+
+    PROMPTS = [
+        "対象の動画ファイルを入力してください",
+        "速度倍率を入力してください",
+        "出力ファイル名を入力してください",
+    ]
+
+    def setUp(self):
+        self.ws = FormWorkspace()
+        self.addCleanup(self.ws.cleanup)
+        patcher = patch("usecases.speed_flow.probe_media_info", return_value=make_media_info())
+        self.mock_probe = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_asks_in_order_and_returns_form(self):
+        ui = make_ui([self.ws.input_file, "2.0", self.ws.output()])
+        form, _media_info = collect_speed_input(SpeedForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS)
+        self.assertEqual(form.input_file, self.ws.input_file)
+        self.assertEqual(form.output_file, self.ws.output())
+
+    def test_missing_input_file_fails_before_asking_value(self):
+        ui = make_ui([self.ws.missing_input])
+        with self.assertRaises(ValidationError):
+            collect_speed_input(SpeedForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS[:1])
+
+    def test_invalid_value_fails_before_asking_output(self):
+        ui = make_ui([self.ws.input_file, "5"])
+        with self.assertRaises(ValidationError):
+            collect_speed_input(SpeedForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS[:2])
+
+    def test_missing_output_directory_fails_after_asking_output(self):
+        ui = make_ui([self.ws.input_file, "2.0", self.ws.output_in_missing_dir])
+        with self.assertRaises(ValidationError):
+            collect_speed_input(SpeedForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS)
 
 
 if __name__ == "__main__":

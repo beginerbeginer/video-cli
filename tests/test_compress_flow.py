@@ -1,8 +1,11 @@
 import unittest
 from unittest.mock import ANY, Mock, patch
 
+from shared.errors import ValidationError
+from tests.form_test_support import FormWorkspace, asked_prompts, make_media_info, make_ui
 from usecases.compress_flow import (
     CompressForm,
+    collect_compress_input,
     execute_compress,
     run_compress_iteration,
 )
@@ -83,6 +86,54 @@ class TestRunCompressIteration(unittest.TestCase):
         result = run_compress_iteration(form, ui)
         self.assertEqual(result.kind, "retry")
         self.assertEqual(result.form, form)
+
+
+class TestCollectCompressInput(unittest.TestCase):
+    """CLI の質問の順番と、エラーを出すタイミングを固定する。"""
+
+    PROMPTS = [
+        "対象の動画ファイルを入力してください",
+        "CRF 値を入力してください",
+        "出力ファイル名を入力してください",
+    ]
+
+    def setUp(self):
+        self.ws = FormWorkspace()
+        self.addCleanup(self.ws.cleanup)
+        patcher = patch("usecases.compress_flow.probe_media_info", return_value=make_media_info())
+        self.mock_probe = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_asks_in_order_and_returns_form(self):
+        ui = make_ui([self.ws.input_file, "23", self.ws.output()])
+        form, _media_info = collect_compress_input(CompressForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS)
+        self.assertEqual(form.input_file, self.ws.input_file)
+        self.assertEqual(form.output_file, self.ws.output())
+
+    def test_missing_input_file_fails_before_asking_value(self):
+        ui = make_ui([self.ws.missing_input])
+        with self.assertRaises(ValidationError):
+            collect_compress_input(CompressForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS[:1])
+
+    def test_invalid_value_fails_before_asking_output(self):
+        ui = make_ui([self.ws.input_file, "52"])
+        with self.assertRaises(ValidationError):
+            collect_compress_input(CompressForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS[:2])
+
+    def test_missing_output_directory_fails_after_asking_output(self):
+        ui = make_ui([self.ws.input_file, "23", self.ws.output_in_missing_dir])
+        with self.assertRaises(ValidationError):
+            collect_compress_input(CompressForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS)
+
+    def test_unsupported_output_extension_fails_after_asking_output(self):
+        ui = make_ui([self.ws.input_file, "23", self.ws.output("out.webm")])
+        with self.assertRaises(ValidationError):
+            collect_compress_input(CompressForm(), ui)
+        self.assertEqual(asked_prompts(ui), self.PROMPTS)
 
 
 if __name__ == "__main__":
