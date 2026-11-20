@@ -204,3 +204,62 @@ class TestTrustedHost(unittest.TestCase):
 
         # Assert
         self.assertEqual(res.status_code, 400)
+
+
+class TestJsonOnlyBody(unittest.TestCase):
+    def setUp(self):
+        app = create_app()
+
+        @app.post("/api/_echo")
+        def _echo(payload: dict) -> dict:
+            return payload
+
+        self.client = _local_client(app)
+
+    def test_JSONのPOSTは受け付けられる(self):
+        # Act
+        res = self.client.post("/api/_echo", json={"input_file": "in.mp4"})
+
+        # Assert
+        self.assertEqual(res.status_code, 200)
+
+    def test_charsetつきのJSONのPOSTは受け付けられる(self):
+        # Act
+        res = self.client.post(
+            "/api/_echo",
+            content=b'{"input_file": "in.mp4"}',
+            headers={"Content-Type": "application/json; charset=utf-8"},
+        )
+
+        # Assert
+        self.assertEqual(res.status_code, 200)
+
+    def test_フォーム送信のPOSTは415で拒否される(self):
+        # Act
+        res = self.client.post("/api/_echo", data={"input_file": "in.mp4"})
+
+        # Assert
+        self.assertEqual(res.status_code, 415)
+
+    def test_text_plainのPOSTは415で拒否される(self):
+        # Act
+        res = self.client.post(
+            "/api/_echo", content=b'{"input_file": "in.mp4"}', headers={"Content-Type": "text/plain"}
+        )
+
+        # Assert
+        self.assertEqual(res.status_code, 415)
+
+    def test_Content_Typeの無いPOSTは415で拒否される(self):
+        # Act
+        res = self.client.post("/api/_echo", content=b'{"input_file": "in.mp4"}')
+
+        # Assert
+        self.assertEqual(res.status_code, 415)
+
+    def test_GETはContent_Typeが無くても通る(self):
+        # Act
+        res = self.client.get("/api/health")
+
+        # Assert
+        self.assertEqual(res.status_code, 200)

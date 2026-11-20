@@ -15,6 +15,26 @@ DEV_CORS_ORIGINS = ["http://localhost:5173"]
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 
+# Why not 本文の有無で判断: 本文が空の POST（例: ジョブのキャンセル）もほかのサイトから送れてしまう。
+# 書き込み系のメソッドは一律に JSON を求め、ブラウザに CORS のプリフライトを必ず挟ませる。
+BODY_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def _is_json(content_type: str) -> bool:
+    return content_type.split(";")[0].strip().lower() == "application/json"
+
+
+async def _reject_non_json_body(request: Request, call_next):
+    # Why not FastAPI の Body の検証に任せる: フォームや text/plain はプリフライト無しで送れるため、
+    # ハンドラに届く前に断って CSRF を防ぐ。
+    if request.method in BODY_METHODS and not _is_json(request.headers.get("content-type", "")):
+        return JSONResponse(
+            status_code=415,
+            content={"errors": [{"field": None, "message": "Content-Type は application/json にしてください。"}]},
+        )
+    return await call_next(request)
+
+
 def _is_available(ensure_installed) -> bool:
     try:
         ensure_installed()
@@ -37,6 +57,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.middleware("http")(_reject_non_json_body)
     # Why not 先に追加: Starlette は後に追加したミドルウェアほど外側で動く。Host の確認を一番外にする。
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
     app.add_exception_handler(ValidationError, _handle_validation_error)
