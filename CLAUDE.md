@@ -43,7 +43,7 @@ main.py        ← エントリーポイント・ディスパッチ
 4. 実装して Green にする
 5. gh pc でPR作成
 6. gh pr checks N --watch でCI確認
-7. gh pm N でマージ
+7. gh pr merge N --squash --delete-branch   # Squash でマージし、ブランチを消す
 8. git checkout main && git pull
 ```
 
@@ -116,6 +116,32 @@ How（どう変えたか）はコードを見ればわかるので書かない�
 - 本文は `.github/pull_request_template.md` に沿って書く
 - 「使用した AI ツール / モデル」の区画（`<!-- ai-attribution:start -->` 〜 `<!-- ai-attribution:end -->`）は、ワークフロー `pr-ai-attribution` が各コミットの Co-Authored-By から自動で書き込む。手で書かない・消さない
 
+### Squash and merge（PR のマージ方法）
+
+PR は **Squash and merge** だけでマージする（issue #127）。1 つの PR が main の 1 つのコミットになり、その 1 行目は PR のタイトルになる。
+
+- **リリースの単位は PR のタイトル**。release-please が読むのは main に入った Squash のコミットだけで、PR の中の個々のコミットはリリースに使われない。CHANGELOG の項目は PR のタイトルになり、版の上げ方も PR のタイトルの種類で決まる
+- **1 つの PR に種類の違う変更（`feat` と `fix` など）を混ぜない**。混ぜると、PR のタイトルの種類だけが数えられ、もう片方は CHANGELOG に載らない。混ざるなら PR を分ける
+- 互換性を壊す変更は、PR のタイトルに `!` を付けて表す（例: `feat!: 設定ファイルの形式を変える`）。リポジトリの設定で Squash のコミットの本文を空にしている（下の「Default to pull request title」）ため、PR の本文やコミットに書いた `BREAKING CHANGE:` は main に残らない
+- PR の中のコミットも、これまでどおり `種類: 日本語の要約` の形にし、本文に Why を書く。レビューで変更の理由を追えるようにするため。形が違っても CI（`commits`）は警告を出すだけ
+- Squash のコミットのメッセージは、マージの画面で既定値（PR のタイトルだけ）のまま確定する。本文に PR の中のコミットの一覧を足さない。足すと、release-please が本文の末尾の `feat: ...` などを別の変更として数え、CHANGELOG に同じ項目が 2 回載る（マージコミットのときと同じ問題）
+- マージは `gh pr merge N --squash --delete-branch` で行う。`gh pm` のエイリアスを使っているなら、次のように直す（`--clobber` で今のエイリアスを上書きする。`gh pm N` の `N` は末尾に足される）
+
+  ```bash
+  gh alias set pm 'pr merge --squash --delete-branch' --clobber
+  ```
+
+**Co-Authored-By と、AI ツール / モデルの区画の扱い**
+
+- PR の中の各コミットの `Co-Authored-By` は、これまでどおり付ける。PR のコミットは PR の画面に残り、ワークフロー `pr-ai-attribution` はそこから区画を書き込むので、区画の動きは変わらない
+- main の Squash のコミットに `Co-Authored-By` が残るかは、GitHub の公式のドキュメントに書かれていない。GitHub はふつう、Squash のメッセージの末尾に、PR のコミットの共同作成者の `Co-authored-by` を足す。マージの画面のメッセージ欄で確かめ、無ければ手で足してよい（残らなくても、使った AI ツールは PR の区画で分かる）
+- PR の中のコミットに `Claude-Session:` を付けない決まりも、これまでどおり。Squash のコミットの本文は空なので main には残らないが、PR のコミットは公開されたまま残る
+
+**リポジトリの設定**（オーナーが GitHub の画面で行う。手順の細かいところは、issue #127 を閉じた PR の本文を参照）
+
+- Settings → General → Pull Requests で、**Allow squash merging** だけを有効にし、Squash のコミットのメッセージの既定値を **Default to pull request title** にする。**Allow merge commits** と **Allow rebase merging** は無効にする
+- 同じ画面で **Automatically delete head branches** を有効にする
+
 ## issue と PR のラベル
 
 ラベルの名前・説明・色は `.github/labels.json` で管理する。main にマージされるとワークフロー `sync-labels` が GitHub に反映する（手動実行も可）。ラベルを増やす・変えるときは、GitHub の画面ではなくこのファイルを直す。
@@ -164,7 +190,7 @@ How（どう変えたか）はコードを見ればわかるので書かない�
 | 不具合の修正・セキュリティの修正 | パッチ | `1.4.2` → `1.4.3` |
 
 - 上の数字を上げたら、下の数字は 0 に戻す
-- どの数字を上げるかは、前回のリリースから main に入ったコミットの種類で決まる（「コミットメッセージのルール」の表）
+- どの数字を上げるかは、前回のリリースから main に入ったコミットの種類で決まる（「コミットメッセージのルール」の表）。PR は Squash でマージするので、コミットの種類は PR のタイトルの種類になる（「Squash and merge（PR のマージ方法）」）
 - 今は `0.x` の段階。互換性を壊す変更でも、1.0.0 になるまではマイナーを上げる（`release-please-config.json` の `bump-minor-pre-major`）
 - GUI 刷新（#82）が終わった時点（#99 のマージ後）で `1.0.0` を出す。そのときは、コミットの本文に `Release-As: 1.0.0` と書いたコミットを main に入れる
 
@@ -194,6 +220,15 @@ release-please を入れる前（2026-05-22）に、手で作ったタグが 2 �
 5. 出発点は `0.1.0`。`bootstrap-sha` に指定したコミットより前の履歴は、最初のリリースに含めない
 
 - ワークフローの手動実行（Actions → release-please → Run workflow）でも、リリース用の PR を作り直せる
+- リリースの前に CHANGELOG の項目を直したいときは、マージ済みの PR の本文の末尾に次の区画を書く。次に release-please が動くと、その PR の Squash のコミットのメッセージの代わりにこの区画を使い、リリース用の PR を作り直す。Squash でマージした PR でだけ使える（マージコミットでは、どのコミットに当てるか release-please が決められない）
+
+  ```
+  BEGIN_COMMIT_OVERRIDE
+  feat: 正しい要約
+  END_COMMIT_OVERRIDE
+  ```
+
+- リリースのあとは、この区画では直せない（release-please は前回のリリースより後のコミットしか読まない）。`CHANGELOG.md` を PR で直し（種類は `docs`）、GitHub Releases の本文は画面で直す（Releases → その版 → Edit）
 - リポジトリの Settings → Actions → General の「Allow GitHub Actions to create and approve pull requests」が無効だと、リリース用の PR を作れない
 - 別のファイルのバージョンも書き換えたいとき（例: `frontend/package.json`）は、`release-please-config.json` の `packages["."].extra-files` に `{ "type": "json", "path": "frontend/package.json", "jsonpath": "$.version" }` を足す。そのファイルの今のバージョンは `.release-please-manifest.json` と同じにしておく
 
@@ -247,6 +282,6 @@ What/How は書かない（コードを読めばわかる）。
 |-----------|------|
 | `gh ic` | issue 作成 |
 | `gh pc` | PR 作成（main へ） |
-| `gh pm N` | PR マージ＆ブランチ削除 |
+| `gh pm N` | PR を Squash でマージ＆ブランチ削除（`gh pr merge N --squash --delete-branch`） |
 | `gh il` | issue 一覧 |
 | `gh mypr` | 自分の PR 一覧 |

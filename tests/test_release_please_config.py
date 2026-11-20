@@ -84,6 +84,28 @@ class TestReleasePleaseConfig(unittest.TestCase):
 
         self.assertEqual([v for v in versions if self.parse_version(v) <= floor], [])
 
+    def test_CHANGELOGの大見出しは先頭の1つだけ(self):
+        # Why not 気にしない: 版の項目が 1 つも無い CHANGELOG に release-please が初めて書き込むと、
+        # 元の `# Changelog` を 1 段下げた `## Changelog` を末尾に残す（v0.4.0 で起きた）。
+        # 版の見出しと同じ段に紛れ込むので、残っていたら気づけるようにする
+        changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        headings = re.findall(r"^#{1,2} (?!\[\d)(.+)$", changelog, re.MULTILINE)
+
+        self.assertEqual(headings, ["Changelog"])
+        self.assertTrue(changelog.startswith("# Changelog\n"))
+
+    def test_CHANGELOGの同じ版に同じ項目を2回載せない(self):
+        # Why not 重複を許す: マージコミットでマージしていた頃は、マージコミット（本文が PR のタイトル）と
+        # 元のコミットの両方を release-please が数え、同じ項目が 2 回ずつ載った（issue #127）
+        changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        for release in re.split(r"^## \[", changelog, flags=re.MULTILINE)[1:]:
+            version = release.split("]", 1)[0]
+            # 項目の文はリンクの前まで。コミットのハッシュは項目ごとに違うので比べない
+            entries = re.findall(r"^\* (.+?) \(\[", release, re.MULTILINE)
+            duplicates = sorted({e for e in entries if entries.count(e) > 1})
+            with self.subTest(version=version):
+                self.assertEqual(duplicates, [])
+
     def test_出発点のコミットを指定している(self):
         self.assertRegex(self.config["bootstrap-sha"], r"^[0-9a-f]{40}$")
 
