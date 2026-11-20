@@ -94,6 +94,28 @@ class TestReplaceSection(unittest.TestCase):
 
         self.assertEqual(result, f"## 概要\n本文\n\n{START_MARKER}\n新しい内容\n{END_MARKER}\n\n末尾")
 
+    def test_文中で引用されたマーカーは区画とみなさない(self):
+        quoted = f"区画は `{START_MARKER}`〜`{END_MARKER}` に書く"
+        body = f"{quoted}\n\n{START_MARKER}\n{END_MARKER}\n"
+
+        result = replace_section(body, f"{START_MARKER}\n新しい内容\n{END_MARKER}")
+
+        self.assertEqual(result, f"{quoted}\n\n{START_MARKER}\n新しい内容\n{END_MARKER}\n")
+
+    def test_文中で引用されたマーカーしか無ければ末尾に追記する(self):
+        body = f"区画は `{START_MARKER}`〜`{END_MARKER}` に書く"
+
+        result = replace_section(body, "SECTION")
+
+        self.assertEqual(result, f"{body}\n\nSECTION\n")
+
+    def test_GitHubのWeb編集で入るCRLFの本文でも区画を見つける(self):
+        body = f"本文\r\n\r\n{START_MARKER}\r\n古い内容\r\n{END_MARKER}\r\n"
+
+        result = replace_section(body, "SECTION")
+
+        self.assertEqual(result, "本文\r\n\r\nSECTION\r\n")
+
     def test_マーカーが無ければ末尾に追記する(self):
         result = replace_section("本文\n", "SECTION")
 

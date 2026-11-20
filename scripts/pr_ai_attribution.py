@@ -17,6 +17,13 @@ END_MARKER = "<!-- ai-attribution:end -->"
 # テストでも git リポジトリが要る。トレーラー 1 種類だけなら行単位の正規表現で足りる。
 _COAUTHOR_RE = re.compile(r"^co-authored-by:\s*(?P<name>.+?)\s*<[^>]*>\s*$", re.IGNORECASE | re.MULTILINE)
 
+# Why not str.find: 本文中で `<!-- ai-attribution:start -->` のようにマーカーを引用すると、
+# その引用を区画の始まりと取り違えて本文を壊す。行頭から行末までマーカーだけの行に限る。
+_SECTION_RE = re.compile(
+    rf"^[ \t]*{re.escape(START_MARKER)}[ \t]*\r?$.*?^[ \t]*{re.escape(END_MARKER)}[ \t]*(?=\r?$)",
+    re.MULTILINE | re.DOTALL,
+)
+
 
 @dataclass
 class Attribution:
@@ -57,10 +64,10 @@ def render_section(attribution: Attribution) -> str:
 
 
 def replace_section(body: str, section: str) -> str:
-    start = body.find(START_MARKER)
-    end = body.find(END_MARKER, start)
-    if start != -1 and end != -1:
-        return body[:start] + section + body[end + len(END_MARKER) :]
+    match = _SECTION_RE.search(body)
+    if match:
+        newline = "\r\n" if "\r\n" in match.group(0) else "\n"
+        return body[: match.start()] + section.replace("\n", newline) + body[match.end() :]
     stripped = body.rstrip()
     return f"{stripped}\n\n{section}\n" if stripped else f"{section}\n"
 
