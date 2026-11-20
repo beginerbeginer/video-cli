@@ -29,8 +29,10 @@ htmlcov/
 .dmypy.json
 .pytype/
 
-# エディタ
-.vscode/
+# エディタ（.vscode は保存時の自動修正をそろえるため、共有する 2 ファイルだけ追跡する）
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
