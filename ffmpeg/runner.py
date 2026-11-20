@@ -123,18 +123,8 @@ def _watch_cancel(
         return
 
 
-def _run_ffmpeg_with_progress(
-    command: list[str],
-    progress_callback: Callable[[ProgressInfo], None] | None,
-    cancel_event: threading.Event | None,
-    log_callback: Callable[[str], None] | None,
-) -> RunResult:
-    if cancel_event is not None and cancel_event.is_set():
-        raise FfmpegCancelledError("FFmpeg の実行はキャンセルされました。")
-
-    cmd = command[:1] + ["-progress", "pipe:1"] + command[1:]
-    chunk: list[str] = []
-    proc = subprocess.Popen(
+def _start_process(cmd: list[str]) -> subprocess.Popen:
+    return subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         # stderr をキャプチャして非ゼロ終了時の detail に使う。
@@ -145,30 +135,46 @@ def _run_ffmpeg_with_progress(
         encoding="utf-8",
         errors="replace",
     )
-    stderr_tail: deque[str] = deque(maxlen=_STDERR_TAIL_LINES)
+
+
+def _start_background_threads(
+    proc: subprocess.Popen,
+    stderr_tail: deque[str],
+    cancel_event: threading.Event | None,
+    log_callback: Callable[[str], None] | None,
+) -> tuple[list[threading.Thread], threading.Event]:
     # stderr を終了後にまとめて読まないのは、パイプのバッファ（数十 KB）が埋まると
     # ffmpeg が書き込みで止まり、stdout を待つこちらと互いに待ち合って固まるため。
-    stderr_thread = threading.Thread(
-        target=_drain_stderr, args=(proc.stderr or (), stderr_tail, log_callback), daemon=True
-    )
-    stderr_thread.start()
+    threads = [threading.Thread(target=_drain_stderr, args=(proc.stderr or (), stderr_tail, log_callback))]
     cancelled = threading.Event()
-    watcher: threading.Thread | None = None
     if cancel_event is not None:
-        watcher = threading.Thread(target=_watch_cancel, args=(proc, cancel_event, cancelled), daemon=True)
-        watcher.start()
+        threads.append(threading.Thread(target=_watch_cancel, args=(proc, cancel_event, cancelled)))
+    for thread in threads:
+        thread.daemon = True
+        thread.start()
+    return threads, cancelled
 
+
+def _read_progress(
+    stdout: Iterable[str],
+    progress_callback: Callable[[ProgressInfo], None] | None,
+) -> None:
+    # stdout をこのスレッドで読むのは、progress_callback を呼び出し元のスレッドで呼ぶ
+    # 今までの約束を保つため（CLI は端末に直接書いている）。
+    chunk: list[str] = []
+    for raw_line in stdout:
+        line = raw_line.rstrip()
+        chunk.append(line)
+        if line.startswith("progress="):
+            if progress_callback is not None:
+                progress_callback(parse_progress_chunk(chunk))
+            chunk = []
+
+
+def _wait_or_kill(proc: subprocess.Popen, progress_callback: Callable[[ProgressInfo], None] | None) -> None:
+    assert proc.stdout is not None
     try:
-        assert proc.stdout is not None
-        # stdout をこのスレッドで読むのは、progress_callback を呼び出し元のスレッドで呼ぶ
-        # 今までの約束を保つため（CLI は端末に直接書いている）。
-        for raw_line in proc.stdout:
-            line = raw_line.rstrip()
-            chunk.append(line)
-            if line.startswith("progress="):
-                if progress_callback is not None:
-                    progress_callback(parse_progress_chunk(chunk))
-                chunk = []
+        _read_progress(proc.stdout, progress_callback)
         proc.wait()
     except BaseException:
         # callback の例外や Ctrl+C で ffmpeg を置き去りにしないため。
@@ -176,15 +182,36 @@ def _run_ffmpeg_with_progress(
             proc.kill()
             proc.wait()
         raise
-    finally:
-        if watcher is not None:
-            watcher.join()
-        stderr_thread.join()
 
+
+def _raise_for_outcome(
+    proc: subprocess.Popen, cancelled: threading.Event, stderr_tail: deque[str], cmd: list[str]
+) -> None:
     if cancelled.is_set():
         raise FfmpegCancelledError("FFmpeg の実行はキャンセルされました。")
     if proc.returncode != 0:
         stderr_text = "\n".join(stderr_tail)
         detail = f"終了コード: {proc.returncode}\n{stderr_text}\n実行コマンド: {format_command(cmd)}"
         raise FfmpegExecutionError("FFmpeg の実行に失敗しました。", detail=detail)
+
+
+def _run_ffmpeg_with_progress(
+    command: list[str],
+    progress_callback: Callable[[ProgressInfo], None] | None,
+    cancel_event: threading.Event | None,
+    log_callback: Callable[[str], None] | None,
+) -> RunResult:
+    if cancel_event is not None and cancel_event.is_set():
+        raise FfmpegCancelledError("FFmpeg の実行はキャンセルされました。")
+
+    cmd = command[:1] + ["-progress", "pipe:1"] + command[1:]
+    proc = _start_process(cmd)
+    stderr_tail: deque[str] = deque(maxlen=_STDERR_TAIL_LINES)
+    threads, cancelled = _start_background_threads(proc, stderr_tail, cancel_event, log_callback)
+    try:
+        _wait_or_kill(proc, progress_callback)
+    finally:
+        for thread in threads:
+            thread.join()
+    _raise_for_outcome(proc, cancelled, stderr_tail, cmd)
     return RunResult(executed=True, command=command)
