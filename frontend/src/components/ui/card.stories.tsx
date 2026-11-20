@@ -1,11 +1,17 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+
 import { Button } from "./button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./card";
 
-type CardStoryArgs = { title: string; description: string; body: string };
+import type { Meta, StoryObj } from "@storybook/react-vite";
 
-function CardExample({ title, description, body }: CardStoryArgs) {
+interface CardStoryArguments {
+  title: string;
+  description: string;
+  body: string;
+}
+
+function CardExample({ title, description, body }: CardStoryArguments) {
   return (
     <Card className="max-w-md">
       <CardHeader>

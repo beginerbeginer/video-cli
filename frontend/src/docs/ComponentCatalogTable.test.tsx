@@ -1,6 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
-import type { ComponentCatalogEntry } from "./component-catalog";
+
 import { ComponentCatalogTable } from "./ComponentCatalogTable";
+
+import type { ComponentCatalogEntry } from "./component-catalog";
 
 const entries: ComponentCatalogEntry[] = [
   { name: "PathField", summary: "パス入力", issue: 106, usedIn: [94], status: "予定" },

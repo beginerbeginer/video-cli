@@ -2,15 +2,15 @@ export const COMPONENT_STATUSES = ["予定", "作成済み", "画面で使用中
 
 export type ComponentStatus = (typeof COMPONENT_STATUSES)[number];
 
-export type ComponentCatalogEntry = {
+export interface ComponentCatalogEntry {
   name: string;
   summary: string;
-  /** 部品を Storybook で作る issue */
+  // 部品を Storybook で作る issue
   issue: number;
-  /** 部品を画面に組み込み、API とつなぐ issue */
+  // 部品を画面に組み込み、API とつなぐ issue
   usedIn: number[];
   status: ComponentStatus;
-};
+}
 
 // MDX に表を直書きする案もあるが、状態の書き間違いや部品の載せ忘れをテストで防げるよう、
 // 一覧はデータとして持ち、MDX はそれを表示するだけにする。

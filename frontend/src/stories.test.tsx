@@ -1,4 +1,5 @@
 import { composeStories, setProjectAnnotations } from "@storybook/react-vite";
+
 import * as previewAnnotations from "../.storybook/preview";
 
 // Storybook と同じ decorator・parameters を効かせないと、「Storybook では見えるのにテストでは違う」状態が生まれる。
@@ -24,6 +25,7 @@ describe("ストーリー", () => {
   });
 
   it.each(storyCases)("$file の $name が描画でき、play 関数が通る", async ({ Story }) => {
-    await Story.run();
+    // 描画や play 関数の中の expect が失敗すると run() が reject されるので、resolve することを確かめる。
+    await expect(Story.run()).resolves.toBeUndefined();
   });
 });

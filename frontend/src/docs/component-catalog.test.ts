@@ -32,7 +32,7 @@ describe("componentCatalog", () => {
     const names = componentCatalog.map((entry) => entry.name);
 
     // Assert
-    expect(names).toEqual(expect.arrayContaining(expected));
+    expect(names).toStrictEqual(expect.arrayContaining(expected));
   });
 
   it("部品名が重複していない", () => {

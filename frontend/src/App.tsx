@@ -1,4 +1,5 @@
 import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -15,7 +16,13 @@ export default function App() {
           <CardDescription>新しい GUI の雛形です。操作画面はこれから作ります。</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={() => setCount((c) => c + 1)}>クリック: {count}</Button>
+          <Button
+            onClick={() => {
+              setCount((c) => c + 1);
+            }}
+          >
+            クリック: {count}
+          </Button>
         </CardContent>
       </Card>
     </main>

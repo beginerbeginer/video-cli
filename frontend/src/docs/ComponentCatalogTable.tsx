@@ -1,10 +1,12 @@
-import { COMPONENT_STATUSES, type ComponentCatalogEntry } from "./component-catalog";
+import { COMPONENT_STATUSES } from "./component-catalog";
+
+import type { ComponentCatalogEntry } from "./component-catalog";
 
 const ISSUE_URL = "https://github.com/beginerbeginer/video-cli/issues";
 
 function IssueLink({ issue }: { issue: number }) {
   return (
-    <a href={`${ISSUE_URL}/${issue}`} target="_blank" rel="noreferrer">
+    <a href={`${ISSUE_URL}/${String(issue)}`} target="_blank" rel="noreferrer">
       #{issue}
     </a>
   );
@@ -12,7 +14,7 @@ function IssueLink({ issue }: { issue: number }) {
 
 function summarizeStatuses(entries: ComponentCatalogEntry[]) {
   return COMPONENT_STATUSES.map(
-    (status) => `${status}: ${entries.filter((entry) => entry.status === status).length}`,
+    (status) => `${status}: ${String(entries.filter((entry) => entry.status === status).length)}`,
   ).join(" / ");
 }
 
