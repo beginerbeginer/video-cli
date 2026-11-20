@@ -159,36 +159,45 @@ class TestCollectSpeedInput(unittest.TestCase):
         self.mock_probe = patcher.start()
         self.addCleanup(patcher.stop)
 
-    def test_asks_in_order_and_returns_form(self):
+    def assert_fails_after_asking(self, answers: list[str], asked: int) -> None:
+        # Arrange
+        ui = make_ui(answers)
+
+        # Act
+        with self.assertRaises(ValidationError):
+            collect_speed_input(SpeedForm(), ui)
+
+        # Assert
+        self.assertEqual(asked_prompts(ui), self.PROMPTS[:asked])
+
+    def test_正しく答えると入力_値_出力の順に聞いてFormを返す(self):
+        # Arrange
         ui = make_ui([self.ws.input_file, "2.0", self.ws.output()])
-        form, _media_info = collect_speed_input(SpeedForm(), ui)
+
+        # Act
+        form, media_info = collect_speed_input(SpeedForm(), ui)
+
+        # Assert
         self.assertEqual(asked_prompts(ui), self.PROMPTS)
-        self.assertEqual(form.input_file, self.ws.input_file)
+        self.assertEqual(form.speed_raw, "2.0")
         self.assertEqual(form.output_file, self.ws.output())
+        self.assertEqual(media_info, self.mock_probe.return_value)
 
-    def test_missing_input_file_fails_before_asking_value(self):
-        ui = make_ui([self.ws.missing_input])
-        with self.assertRaises(ValidationError):
-            collect_speed_input(SpeedForm(), ui)
-        self.assertEqual(asked_prompts(ui), self.PROMPTS[:1])
+    def test_入力ファイルが無いと値を聞く前にエラーになる(self):
+        self.assert_fails_after_asking([self.ws.missing_input], asked=1)
 
-    def test_invalid_value_fails_before_asking_output(self):
-        ui = make_ui([self.ws.input_file, "5"])
-        with self.assertRaises(ValidationError):
-            collect_speed_input(SpeedForm(), ui)
-        self.assertEqual(asked_prompts(ui), self.PROMPTS[:2])
+    def test_値が不正だと出力を聞く前にエラーになる(self):
+        self.assert_fails_after_asking([self.ws.input_file, "5"], asked=2)
 
-    def test_missing_output_directory_fails_after_asking_output(self):
-        ui = make_ui([self.ws.input_file, "2.0", self.ws.output_in_missing_dir])
-        with self.assertRaises(ValidationError):
-            collect_speed_input(SpeedForm(), ui)
-        self.assertEqual(asked_prompts(ui), self.PROMPTS)
+    def test_出力ディレクトリが無いと出力を聞いたあとでエラーになる(self):
+        self.assert_fails_after_asking([self.ws.input_file, "2.0", self.ws.output_in_missing_dir], asked=3)
 
 
 class TestValidateSpeedForm(unittest.TestCase):
     def setUp(self):
         self.ws = FormWorkspace()
         self.addCleanup(self.ws.cleanup)
+        (self.ws.root / "in.txt").write_text("")
         patcher = patch("usecases.speed_flow.probe_media_info", return_value=make_media_info())
         self.mock_probe = patcher.start()
         self.addCleanup(patcher.stop)
@@ -197,12 +206,18 @@ class TestValidateSpeedForm(unittest.TestCase):
         form = SpeedForm(input_file=self.ws.input_file, speed_raw="2.0", output_file=self.ws.output())
         return replace(form, **overrides)
 
-    def test_returns_media_info_without_ui(self):
-        media_info = validate_speed_form(self.valid_form())
+    def test_正しいFormを渡すと対話なしでMediaInfoが返る(self):
+        # Arrange
+        form = self.valid_form()
+
+        # Act
+        media_info = validate_speed_form(form)
+
+        # Assert
         self.assertEqual(media_info, self.mock_probe.return_value)
         self.mock_probe.assert_called_once_with(self.ws.input_file)
 
-    def test_error_field_is_form_field_name(self):
+    def test_項目が不正だとその項目名がfieldに入る(self):
         cases = [
             ({"input_file": ""}, "input_file"),
             ({"input_file": self.ws.missing_input}, "input_file"),
@@ -215,32 +230,50 @@ class TestValidateSpeedForm(unittest.TestCase):
             ({"output_file": ""}, "output_file"),
             ({"output_file": self.ws.output_in_missing_dir}, "output_file"),
         ]
-        (self.ws.root / "in.txt").write_text("")
         for overrides, expected_field in cases:
             with self.subTest(overrides=overrides):
+                # Arrange
+                form = self.valid_form(**overrides)
+
+                # Act
                 with self.assertRaises(ValidationError) as ctx:
-                    validate_speed_form(self.valid_form(**overrides))
+                    validate_speed_form(form)
+
+                # Assert
                 self.assertEqual(ctx.exception.field, expected_field)
 
-    def test_probe_failure_is_tagged_input_file(self):
+    def test_probeに失敗するとfieldはinput_fileになる(self):
+        # Arrange
         self.mock_probe.side_effect = ValidationError("ffprobe でメディア情報を取得できませんでした")
+
+        # Act
         with self.assertRaises(ValidationError) as ctx:
             validate_speed_form(self.valid_form())
+
+        # Assert
         self.assertEqual(ctx.exception.field, "input_file")
 
 
 class TestBuildSpeedCommandFromForm(unittest.TestCase):
-    def test_matches_build_speed_command(self):
+    def test_build_speed_commandを直接呼んだときと同じコマンドが返る(self):
+        # Arrange
         form = SpeedForm(input_file="in.mp4", speed_raw="2.0", output_file="out.mp4")
-        self.assertEqual(
-            build_speed_command_from_form(form),
-            build_speed_command(input_file="in.mp4", output_file="out.mp4", speed=2.0),
-        )
 
-    def test_invalid_value_raises_with_field(self):
+        # Act
+        command = build_speed_command_from_form(form)
+
+        # Assert
+        self.assertEqual(command, build_speed_command(input_file="in.mp4", output_file="out.mp4", speed=2.0))
+
+    def test_値が不正だとその項目名がfieldに入る(self):
+        # Arrange
         form = SpeedForm(input_file="in.mp4", speed_raw="abc", output_file="out.mp4")
+
+        # Act
         with self.assertRaises(ValidationError) as ctx:
             build_speed_command_from_form(form)
+
+        # Assert
         self.assertEqual(ctx.exception.field, "speed_raw")
 
 
