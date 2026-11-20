@@ -22,6 +22,14 @@ _FORMAT_HINT = "`種類: 要約` の形にしてください（例: `feat: 動�
     ALLOWED_TYPES
 )
 
+# Why not 本文のどこかに文字列があれば警告: ルールを説明するコミットで `Claude-Session:` に触れただけでも
+# 警告になる。トレーラーは行頭に書かれるので、行頭のものだけを見る。
+_SESSION_TRAILER_RE = re.compile(r"^claude-session:", re.IGNORECASE | re.MULTILINE)
+
+_SESSION_TRAILER_HINT = (
+    "`Claude-Session:` のトレーラーは付けないでください（公開リポジトリにセッションの URL を残さないため。issue #120）"
+)
+
 
 def check_header(header: str) -> str | None:
     """形が正しければ None、違えば理由を返す。"""
@@ -47,6 +55,15 @@ def check_commits(git_log: str) -> list[tuple[str, str]]:
     return problems
 
 
+def find_session_trailers(git_log: str) -> list[str]:
+    """git log -z の出力から、`Claude-Session:` トレーラーのあるコミットの 1 行目を返す。"""
+    return [
+        message.strip().splitlines()[0]
+        for message in git_log.split("\0")
+        if message.strip() and _SESSION_TRAILER_RE.search(message)
+    ]
+
+
 def _check_title(title: str) -> int:
     error = check_header(title)
     if error:
@@ -57,13 +74,17 @@ def _check_title(title: str) -> int:
 
 
 def _check_commits(log_path: str) -> int:
-    problems = check_commits(Path(log_path).read_text(encoding="utf-8"))
+    git_log = Path(log_path).read_text(encoding="utf-8")
+    problems = check_commits(git_log)
+    session_commits = find_session_trailers(git_log)
     # Why not 失敗にする: 既存の PR の古いコミットを書き換え（force-push）させたくない。
     # PR はマージコミットで取り込むので、release-please が読むのは PR タイトルではなく各コミット。
     # 形の違うコミットはリリースに載らないので、気づけるよう警告は出す。
     for header, error in problems:
         print(f"::warning title=コミットメッセージ::{header} — {error}")
-    if not problems:
+    for header in session_commits:
+        print(f"::warning title=Claude-Session トレーラー::{header} — {_SESSION_TRAILER_HINT}")
+    if not problems and not session_commits:
         print("コミットメッセージ OK")
     return 0
 

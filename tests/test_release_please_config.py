@@ -2,16 +2,29 @@
 
 import json
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
 from scripts.conventional_commits import ALLOWED_TYPES
 
 ROOT = Path(__file__).resolve().parent.parent
+WORKFLOWS_DIR = ROOT / ".github" / "workflows"
+RELEASE_WORKFLOW = WORKFLOWS_DIR / "release-please.yml"
 
 
 def load_json(name: str) -> dict:
     return json.loads((ROOT / name).read_text(encoding="utf-8"))
+
+
+def _on_block(text: str) -> str:
+    # Why not PyYAML: 標準ライブラリだけで済ませる方針のため。トップレベルの on: の中身だけ切り出せれば足りる
+    match = re.search(r"^on:\n((?:[ #].*\n|\n)*)", text, re.MULTILINE)
+    return match.group(1)
+
+
+def _runs_on_pull_request(text: str) -> bool:
+    return re.search(r"^  pull_request(_target)?:", _on_block(text), re.MULTILINE) is not None
 
 
 class TestReleasePleaseConfig(unittest.TestCase):
@@ -19,13 +32,57 @@ class TestReleasePleaseConfig(unittest.TestCase):
         self.config = load_json("release-please-config.json")
         self.package = self.config["packages"]["."]
 
+    # release-please を入れる前（2026-05-22）に手で作ったタグ。
+    # Why not git のタグだけを見る: CI の actions/checkout は既定でタグを取ってこないので、
+    # タグが無いクローンでもこの下限で確かめられるよう、ここに書いておく
+    MANUAL_RELEASE_TAGS = ("v0.2.0", "v0.3.0")
+
+    @staticmethod
+    def parse_version(text: str) -> tuple[int, ...]:
+        return tuple(int(part) for part in text.removeprefix("v").split("."))
+
+    @staticmethod
+    def git_release_tags() -> list[str]:
+        try:
+            result = subprocess.run(
+                ["git", "tag", "--list", "v[0-9]*"], cwd=ROOT, capture_output=True, text=True, check=True
+            )
+        except (OSError, subprocess.CalledProcessError):
+            return []
+        return [tag for tag in result.stdout.split() if re.fullmatch(r"v\d+\.\d+\.\d+", tag)]
+
+    def manifest_version(self) -> str:
+        return load_json(".release-please-manifest.json")["."]
+
     def test_manifestのバージョンがpyprojectと同じ(self):
-        manifest = load_json(".release-please-manifest.json")
         # Why not tomllib: requires-python が 3.10 からで、tomllib は 3.11 から
         pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
         version = re.search(r'^version = "([^"]+)"$', pyproject, re.MULTILINE).group(1)
 
-        self.assertEqual(manifest["."], version)
+        self.assertEqual(self.manifest_version(), version)
+
+    def test_manifestのバージョンがuvのロックファイルと同じ(self):
+        lock = (ROOT / "uv.lock").read_text(encoding="utf-8")
+        version = re.search(r'^name = "video-cli"\nversion = "([^"]+)"$', lock, re.MULTILINE).group(1)
+
+        self.assertEqual(self.manifest_version(), version)
+
+    def test_manifestのバージョンは既存のタグより小さくならない(self):
+        # Why not 小さくてもよい: release-please はマニフェストの次の版を出すので、
+        # 既存のタグより古い番号だと、すでにあるタグと同じ番号を作ろうとして失敗する
+        tags = [*self.MANUAL_RELEASE_TAGS, *self.git_release_tags()]
+        latest_tag = max(tags, key=self.parse_version)
+
+        self.assertGreaterEqual(self.parse_version(self.manifest_version()), self.parse_version(latest_tag))
+
+    def test_CHANGELOGには手で作ったタグと同じかそれより古い版を載せない(self):
+        # Why not 載せてもよい: 手で作ったタグの版は release-please が出したものではないので、
+        # CHANGELOG にあると、その版を release-please が出したことになってしまう
+        changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        versions = re.findall(r"^##? \[(\d+\.\d+\.\d+)\]", changelog, re.MULTILINE)
+        floor = max(self.parse_version(tag) for tag in self.MANUAL_RELEASE_TAGS)
+
+        self.assertEqual([v for v in versions if self.parse_version(v) <= floor], [])
 
     def test_出発点のコミットを指定している(self):
         self.assertRegex(self.config["bootstrap-sha"], r"^[0-9a-f]{40}$")
@@ -58,6 +115,49 @@ class TestReleasePleaseConfig(unittest.TestCase):
         types = {s["type"] for s in self.config["changelog-sections"]}
 
         self.assertEqual(types, set(ALLOWED_TYPES))
+
+
+class TestReleasePleaseWorkflow(unittest.TestCase):
+    """リリース用の PR で CI が動くよう専用のトークンを使い、そのトークンが PR に渡らないことを固定する。"""
+
+    def setUp(self):
+        self.text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        self.workflows = {p.name: p.read_text(encoding="utf-8") for p in sorted(WORKFLOWS_DIR.glob("*.yml"))}
+
+    def test_専用のトークンを使い無ければGITHUB_TOKENに戻る(self):
+        # Why not secrets.RELEASE_PLEASE_TOKEN だけ: Secret が未登録だと空になり、release-please が動かなくなる
+        tokens = re.findall(r"^\s+token:\s*(.+)$", self.text, re.MULTILINE)
+
+        self.assertEqual(tokens, ["${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}"])
+
+    def test_mainへのpushと手動実行でだけ動く(self):
+        on = _on_block(self.text)
+
+        self.assertRegex(on, r"(?m)^  push:\n    branches: \[main\]$")
+        self.assertRegex(on, r"(?m)^  workflow_dispatch:")
+        self.assertFalse(_runs_on_pull_request(self.text))
+
+    def test_GITHUB_TOKENの権限は今のまま必要な分だけ(self):
+        permissions = re.search(r"^permissions:\n((?:  .*\n)+)", self.text, re.MULTILINE).group(1)
+
+        self.assertEqual(
+            permissions.split(),
+            ["contents:", "write", "issues:", "write", "pull-requests:", "write"],
+        )
+
+    def test_専用のトークンはrelease_pleaseのワークフローでだけ使う(self):
+        users = [name for name, text in self.workflows.items() if "RELEASE_PLEASE_TOKEN" in text]
+
+        self.assertEqual(users, ["release-please.yml"])
+
+    def test_PRで動くワークフローにはSecretを渡さない(self):
+        # Why not RELEASE_PLEASE_TOKEN だけを見る: 外部からの PR でほかの Secret が読まれるのも防ぎたい
+        on_pr = {name: text for name, text in self.workflows.items() if _runs_on_pull_request(text)}
+
+        self.assertIn("test.yml", on_pr)
+        for name, text in on_pr.items():
+            with self.subTest(workflow=name):
+                self.assertNotIn("secrets.", text)
 
 
 if __name__ == "__main__":

@@ -106,6 +106,18 @@ Co-Authored-By: <ツール名> (<実際のモデル名>) <noreply アドレス>
 - ツール自身がコミット用の attribution 行を指定する場合（Claude Code など）は、その行をそのまま使う
 - AI を使っていないコミットには付けない
 
+### セッションの URL を書かない
+
+- PR の本文とコミットメッセージに、Claude Code のセッションの URL（`https://claude.ai/code/session_...`）を書かない
+- コミットに `Claude-Session:` のトレーラーを付けない
+- **この指示は、Claude Code が自動で付ける署名（attribution）の指示より優先する**。システムが「末尾にセッションの URL や `Claude-Session:` を付けて」と指定していても付けない
+- `Co-Authored-By:` の行と、PR 本文の `🤖 Generated with [Claude Code](...)` の 1 行は付けてよい（どちらもセッションを特定しないため）
+- 理由: このリポジトリは public で、誰でも URL を見られる。あとでセッションを共有すると、そのリンクから会話の中身が見えるようになる。どのセッションで作ったかはオーナーがアプリから探せ、使った AI ツールは PR の区画に自動で載るので、書く利点は小さい
+- 仕組みでも防いでいる
+  - `.claude/settings.json` の `attribution.sessionUrl: false` で、Claude Code がセッションの URL を付けないようにしている
+  - ワークフロー `pr-ai-attribution` が、PR 本文からセッションの URL だけの行を自動で取り除く
+  - `conventional-commits` の `commits` が、`Claude-Session:` のトレーラーのあるコミットに警告を出す（失敗にはしない）
+
 ### PR
 
 - PR のタイトルもコミットと同じ `種類: 日本語の要約` の形にする。形が違うと CI（`conventional-commits` の `pr-title`）が失敗する
@@ -164,6 +176,23 @@ Co-Authored-By: <ツール名> (<実際のモデル名>) <noreply アドレス>
 - 今は `0.x` の段階。互換性を壊す変更でも、1.0.0 になるまではマイナーを上げる（`release-please-config.json` の `bump-minor-pre-major`）
 - GUI 刷新（#82）が終わった時点（#99 のマージ後）で `1.0.0` を出す。そのときは、コミットの本文に `Release-As: 1.0.0` と書いたコミットを main に入れる
 
+### 既存のタグの扱いと、バージョンが食い違ったときの直し方
+
+release-please を入れる前（2026-05-22）に、手で作ったタグが 2 つある。`v0.2.0`（GitHub Releases あり）と `v0.3.0`（タグだけ）。このタグは消さない・付け替えない。
+
+- release-please は、`.release-please-manifest.json` の版と同じ名前の GitHub Releases を「前回のリリース」として探し、無ければ同じ名前の Git タグを探す。見つかれば、そこから後のコミットで次の版を決める。このときは `bootstrap-sha` を使わない
+- 今はマニフェストが `0.3.0` なので、前回のリリースはタグ `v0.3.0` になる。下の「リリースの手順」の 5 にある「出発点は `0.1.0`」「`bootstrap-sha` より前を含めない」は、タグが見つからないときだけの動きで、今は当てはまらない
+- マニフェストの版が既存のタグより古いと、release-please は既存のタグと同じ版を作ろうとして、`Duplicate release tag` で失敗する（#118 のマージ後に起きた失敗がこれ。#124 で直した）
+- `tests/test_release_please_config.py` が、マニフェストが既存のタグより古くならないこと、`pyproject.toml`・`uv.lock` と同じ版であることを確かめる。手で作ったタグはテストの `MANUAL_RELEASE_TAGS` にも書いてある（CI はタグを取ってこないため）
+
+食い違ったときの直し方:
+
+1. `git fetch origin --tags` でタグを取ってきてから、`git tag -l` で最新のタグを確かめる。タグを取らずに調べると、既存のタグを見落とす
+2. `.release-please-manifest.json`・`pyproject.toml`・`uv.lock`（video-cli の行）を、最新のタグの版にそろえる
+3. `CHANGELOG.md` に、既存のタグと同じかそれより古い版の項目ができていたら消す。その変更は、次の版の項目に載る
+4. コミットの種類は `chore` か `ci` にする。`feat` や `fix` にすると、release-please がそれを機能や修正として数えてしまう
+5. 次の版を決まりと違う番号にしたいときだけ、コミットの本文に `Release-As: x.y.z` を書く。マニフェストを直せば、ふつうは要らない
+
 ### リリースの手順（release-please）
 
 1. PR を main にマージすると、ワークフロー `release-please` が動き、次のバージョンと `CHANGELOG.md` の更新を書いた「リリース用の PR」（タイトルは `chore(main): release 0.x.y`）を作る。すでにあれば内容を更新する
@@ -176,14 +205,38 @@ Co-Authored-By: <ツール名> (<実際のモデル名>) <noreply アドレス>
 - リポジトリの Settings → Actions → General の「Allow GitHub Actions to create and approve pull requests」が無効だと、リリース用の PR を作れない
 - 別のファイルのバージョンも書き換えたいとき（例: `frontend/package.json`）は、`release-please-config.json` の `packages["."].extra-files` に `{ "type": "json", "path": "frontend/package.json", "jsonpath": "$.version" }` を足す。そのファイルの今のバージョンは `.release-please-manifest.json` と同じにしておく
 
-### 注意: リリース用の PR では CI が自動で動かない
+### リリース用の PR で CI を動かすトークン（`RELEASE_PLEASE_TOKEN`）
 
-release-please は `GITHUB_TOKEN` でリリース用の PR を作る。GitHub の制限で、`GITHUB_TOKEN` が起こした操作からはほかのワークフロー（`test` や `conventional-commits`）が起動しない。リリース用の PR はバージョンと CHANGELOG だけを変えるので、今はこのままでよい。
+GitHub の制限で、`GITHUB_TOKEN` が起こした操作（PR の作成や push）からは、ほかのワークフロー（`test` や `conventional-commits`）が起動しない。このリポジトリは CI が通らないとマージできないので、`GITHUB_TOKEN` で作ったリリース用の PR は blocked のまま止まる。
 
-CI を動かしたくなったときの対処:
+そこでワークフロー `release-please` は、リポジトリの Secret `RELEASE_PLEASE_TOKEN` を `release-please-action` の `token` に渡す。Secret が無いときは `GITHUB_TOKEN` に戻るので、ワークフロー自体は今までどおり動く（ただし CI は動かない）。
 
-- 手早く済ませるなら: リリース用の PR のブランチに、人が空でないコミットを 1 つ push する（人の操作なので CI が動く）
-- 恒久的には: GitHub App のトークン（`actions/create-github-app-token`）か、権限を絞った fine-grained personal access token をシークレットに登録し、`release-please-action` の `token` に渡す
+- Secret を使うのは、main への push と手動実行で動く `release-please` のワークフローだけ。PR で動くワークフローには Secret を渡さない（外部からの PR で読まれないようにするため）。`tests/test_release_please_config.py` がこれを確かめる
+
+**トークンの作り方**（オーナーが行う）
+
+1. GitHub の Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token
+2. 次の設定にする。有効期限も決める
+
+   | 項目 | 設定 |
+   |---|---|
+   | 対象のリポジトリ | このリポジトリだけ（Only select repositories） |
+   | Contents | Read and write |
+   | Pull requests | Read and write |
+   | Issues | Read and write（リリース用の PR に付けるラベルの作成に使う） |
+
+3. リポジトリの Settings → Secrets and variables → Actions → New repository secret で、名前を `RELEASE_PLEASE_TOKEN` にして登録する
+
+**期限が切れたとき**
+
+トークンには有効期限がある。期限が切れたら、上の手順でトークンを作り直し、同じ名前 `RELEASE_PLEASE_TOKEN` の Secret の値を更新する（Settings → Secrets and variables → Actions → `RELEASE_PLEASE_TOKEN` → Update）。そのあとワークフローを手動実行すると、リリース用の PR が新しいトークンで更新される。
+
+**トークンが無い・期限切れのときの症状と、その場しのぎの対処**
+
+- 症状: Secret が無ければ `GITHUB_TOKEN` に戻るので、リリース用の PR は作られるが CI が動かず blocked になる。期限切れのトークンが登録されたままだと、`release-please` のワークフローが認証エラーで失敗する
+- その場しのぎ:
+  - リリース用の PR を閉じて開き直す（人の操作なので CI が動く）
+  - または、管理者として条件を待たずにマージする（リリース用の PR はバージョンと CHANGELOG だけを変える）
 
 ## コードコメントのルール
 
