@@ -1,0 +1,48 @@
+# actions/labeler の設定。PR で変わったファイルのパスから `領域:*` のラベルを付ける。
+# パスの割り当ては issue #110 の表に合わせる。ラベル名に `:` を含むので、キーはシングルクォートで書く
+# （tests/test_sync_labels.py がこの決まりを前提に、定義済みのラベルとずれていないかを確かめる）。
+
+'領域:CLI':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'ui/cli/**'
+          - 'main.py'
+
+'領域:ロジック':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'domain/**'
+          - 'usecases/**'
+          - 'validation/**'
+          - 'shared/**'
+
+'領域:FFmpeg':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'ffmpeg/**'
+
+'領域:API':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'api/**'
+
+'領域:フロント':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'frontend/**'
+
+'領域:開発環境':
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**'
+          - '.claude/**'
+          - 'scripts/**'
+          - 'tests/conftest.py'
+          - 'pyproject.toml'
+          - 'uv.lock'
+          - '.gitignore'
+          - 'CLAUDE.md'
+          - 'AGENTS.md'
+          - 'README.md'
+          - 'docs/**'
+          - '**/*.md'
