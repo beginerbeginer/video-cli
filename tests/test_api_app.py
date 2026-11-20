@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+from fastapi import Request
 from fastapi.testclient import TestClient
 
 from api.app import create_app
@@ -209,10 +210,12 @@ class TestTrustedHost(unittest.TestCase):
 class TestJsonOnlyBody(unittest.TestCase):
     def setUp(self):
         app = create_app()
+        self.calls = []
 
         @app.post("/api/_echo")
-        def _echo(payload: dict) -> dict:
-            return payload
+        async def _echo(request: Request) -> dict:
+            self.calls.append(await request.body())
+            return {}
 
         self.client = _local_client(app)
 
@@ -240,6 +243,13 @@ class TestJsonOnlyBody(unittest.TestCase):
 
         # Assert
         self.assertEqual(res.status_code, 415)
+
+    def test_JSON以外のPOSTはルートを実行せずに断られる(self):
+        # Act
+        self.client.post("/api/_echo", data={"input_file": "in.mp4"})
+
+        # Assert
+        self.assertEqual(self.calls, [])
 
     def test_text_plainのPOSTは415で拒否される(self):
         # Act
