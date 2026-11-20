@@ -1,16 +1,13 @@
 from dataclasses import dataclass, replace
 
+from domain.media_info import MediaInfo
 from ffmpeg.commands import build_speed_command
 from ffmpeg.probe import probe_media_info
 from shared.formatters import format_media_info_summary
 from usecases.flow_result import FlowResult
+from usecases.form_validation import form_field, require_field, validate_output_path, validate_video_input_path
 from usecases.shared_flow import execute_with_output, handle_generic_review, run_flow, run_generic_iteration
 from usecases.ui_port import UIPort
-from validation.file_validators import (
-    validate_input_file_exists,
-    validate_output_directory_exists,
-    validate_video_file_extension,
-)
 from validation.value_validators import require_non_empty, validate_speed_multiplier
 
 
@@ -21,33 +18,54 @@ class SpeedForm:
     output_file: str = "./output-speed.mp4"
 
 
-def collect_speed_input(form: SpeedForm, ui: UIPort):
-    input_file = require_non_empty(
-        ui.ask_text("対象の動画ファイルを入力してください\n例: ./input/video.mp4", default=form.input_file),
-        "入力ファイル",
-    )
-    validate_input_file_exists(input_file)
-    validate_video_file_extension(input_file)
+def validate_speed_input_file(input_file: str) -> MediaInfo:
+    validate_video_input_path(input_file)
+    with form_field("input_file"):
+        return probe_media_info(input_file)
 
-    media_info = probe_media_info(input_file)
+
+def validate_speed_raw(raw: str) -> float:
+    require_field(raw, "速度倍率", "speed_raw")
+    with form_field("speed_raw"):
+        return validate_speed_multiplier(raw, "速度倍率")
+
+
+def validate_speed_output_file(output_file: str) -> None:
+    validate_output_path(output_file)
+
+
+def validate_speed_form(form: SpeedForm) -> MediaInfo:
+    media_info = validate_speed_input_file(form.input_file)
+    validate_speed_raw(form.speed_raw)
+    validate_speed_output_file(form.output_file)
+    return media_info
+
+
+def build_speed_command_from_form(form: SpeedForm) -> list[str]:
+    return build_speed_command(
+        input_file=form.input_file,
+        output_file=form.output_file,
+        speed=validate_speed_raw(form.speed_raw),
+    )
+
+
+def collect_speed_input(form: SpeedForm, ui: UIPort):
+    # validate_speed_form を最後にまとめて呼ばないのは、CLI では入力ファイルの誤りを
+    # 次の項目を聞く前に知らせたいため。段階ごとの検証関数を聞いた直後に呼ぶ。
+    input_file = ui.ask_text("対象の動画ファイルを入力してください\n例: ./input/video.mp4", default=form.input_file)
+    media_info = validate_speed_input_file(input_file)
     print("\n入力動画情報:")
     print(format_media_info_summary(media_info))
     print()
 
-    speed_raw = require_non_empty(
-        ui.ask_text(
-            "速度倍率を入力してください\n数値: 0.25〜4.0（1.0=通常、2.0=2倍速、0.5=スロー）\n例: 2.0",
-            default=form.speed_raw,
-        ),
-        "速度倍率",
+    speed_raw = ui.ask_text(
+        "速度倍率を入力してください\n数値: 0.25〜4.0（1.0=通常、2.0=2倍速、0.5=スロー）\n例: 2.0",
+        default=form.speed_raw,
     )
-    validate_speed_multiplier(speed_raw, "速度倍率")
+    validate_speed_raw(speed_raw)
 
-    output_file = require_non_empty(
-        ui.ask_text("出力ファイル名を入力してください\n例: ./output/fast.mp4", default=form.output_file),
-        "出力ファイル",
-    )
-    validate_output_directory_exists(output_file)
+    output_file = ui.ask_text("出力ファイル名を入力してください\n例: ./output/fast.mp4", default=form.output_file)
+    validate_speed_output_file(output_file)
 
     return replace(form, input_file=input_file, speed_raw=speed_raw, output_file=output_file), media_info
 
@@ -99,15 +117,7 @@ def handle_speed_review(form: SpeedForm, ui: UIPort) -> FlowResult:
 
 
 def execute_speed(form: SpeedForm, dry_run: bool = False) -> None:
-    speed = validate_speed_multiplier(form.speed_raw, "速度倍率")
-
-    command = build_speed_command(
-        input_file=form.input_file,
-        output_file=form.output_file,
-        speed=speed,
-    )
-
-    execute_with_output(command, form.output_file, dry_run)
+    execute_with_output(build_speed_command_from_form(form), form.output_file, dry_run)
 
 
 def run_speed_iteration(form: SpeedForm, ui: UIPort) -> FlowResult:
