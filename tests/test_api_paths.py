@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from api.paths import ROOT_ENV, get_allowed_root, is_within_root
+from api.paths import ROOT_ENV, PathOutsideRootError, get_allowed_root, is_within_root, resolve_within_root
 
 
 class TestGetAllowedRoot(unittest.TestCase):
@@ -98,3 +98,66 @@ class TestIsWithinRoot(unittest.TestCase):
 
         # Act / Assert
         self.assertTrue(is_within_root(self.root / "in.mp4", root_link))
+
+
+class TestResolveWithinRoot(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        base = Path(self._tmp.name).resolve()
+        self.root = base / "root"
+        self.outside = base / "outside"
+        self.root.mkdir()
+        self.outside.mkdir()
+        (self.root / "in.mp4").touch()
+        (self.outside / "secret.mp4").touch()
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_範囲内のパスは解決済みの絶対パスで返る(self):
+        # Arrange
+        path = self.root / "sub" / ".." / "in.mp4"
+
+        # Act
+        resolved = resolve_within_root(path, self.root)
+
+        # Assert
+        self.assertEqual(resolved, self.root / "in.mp4")
+
+    def test_範囲内を指すシンボリックリンクは実体のパスで返る(self):
+        # Arrange
+        link = self.root / "link.mp4"
+        link.symlink_to(self.root / "in.mp4")
+
+        # Act
+        resolved = resolve_within_root(link, self.root)
+
+        # Assert
+        self.assertEqual(resolved, self.root / "in.mp4")
+
+    def test_範囲外のパスはPathOutsideRootErrorになる(self):
+        # Act / Assert
+        with self.assertRaises(PathOutsideRootError):
+            resolve_within_root(self.outside / "secret.mp4", self.root)
+
+    def test_dotdotで範囲外に出るパスはPathOutsideRootErrorになる(self):
+        # Act / Assert
+        with self.assertRaises(PathOutsideRootError):
+            resolve_within_root(self.root / ".." / "outside" / "secret.mp4", self.root)
+
+    def test_範囲外を指すシンボリックリンクはPathOutsideRootErrorになる(self):
+        # Arrange
+        link = self.root / "link.mp4"
+        link.symlink_to(self.outside / "secret.mp4")
+
+        # Act / Assert
+        with self.assertRaises(PathOutsideRootError):
+            resolve_within_root(link, self.root)
+
+    def test_エラーのメッセージに範囲外のパスを含めない(self):
+        # Act
+        with self.assertRaises(PathOutsideRootError) as ctx:
+            resolve_within_root(self.outside / "secret.mp4", self.root)
+
+        # Assert
+        self.assertNotIn("outside", str(ctx.exception))
