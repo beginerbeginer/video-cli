@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# Why not リポジトリの既定値に任せる: 既定が書き込みだと、依存パッケージのインストール処理まで
+# 書き込みのトークンで動く。テストは読み取りだけで足りる。
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
