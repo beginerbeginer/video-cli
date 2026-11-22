@@ -401,6 +401,5 @@ class TestParseProgressChunk(unittest.TestCase):
         self.assertEqual(info.out_time, "00:00:05")
 
 
-
 if __name__ == "__main__":
     unittest.main()
