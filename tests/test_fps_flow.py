@@ -43,9 +43,7 @@ class TestRunFpsIteration(unittest.TestCase):
     @patch("usecases.fps_flow.build_fps_summary")
     @patch("usecases.shared_flow.handle_generic_review")
     @patch("usecases.fps_flow.execute_fps")
-    def test_run_fps_iteration_execute_path(
-        self, mock_execute, mock_review, mock_summary, mock_collect
-    ):
+    def test_run_fps_iteration_execute_path(self, mock_execute, mock_review, mock_summary, mock_collect):
         form = FpsForm()
         updated = FpsForm(input_file="in.mp4", fps_raw="30", output_file="out.mp4")
         mock_collect.return_value = (updated, object())
@@ -60,9 +58,7 @@ class TestRunFpsIteration(unittest.TestCase):
     @patch("usecases.fps_flow.build_fps_summary")
     @patch("usecases.shared_flow.handle_generic_review")
     @patch("usecases.fps_flow.execute_fps")
-    def test_run_fps_iteration_dry_run_path(
-        self, mock_execute, mock_review, mock_summary, mock_collect
-    ):
+    def test_run_fps_iteration_dry_run_path(self, mock_execute, mock_review, mock_summary, mock_collect):
         form = FpsForm()
         updated = FpsForm(input_file="in.mp4", fps_raw="30", output_file="out.mp4")
         mock_collect.return_value = (updated, object())
