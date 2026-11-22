@@ -44,9 +44,7 @@ def collect_volume_input(form: VolumeForm, ui: UIPort):
     validate_volume_level(volume_raw, "音量倍率")
 
     output_file = require_non_empty(
-        ui.ask_text(
-            "出力ファイル名を入力してください\n例: ./output/volume-adjusted.mp4", default=form.output_file
-        ),
+        ui.ask_text("出力ファイル名を入力してください\n例: ./output/volume-adjusted.mp4", default=form.output_file),
         "出力ファイル",
     )
     validate_output_directory_exists(output_file)

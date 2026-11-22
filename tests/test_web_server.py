@@ -19,10 +19,12 @@ class TestPreviewEndpoint(unittest.TestCase):
     def test_fps_preview_returns_command(self):
         res = self.client.post(
             "/api/preview",
-            data=json.dumps({
-                "operation": "fps",
-                "params": {"input_file": "in.mp4", "fps": "30", "output_file": "out.mp4"},
-            }),
+            data=json.dumps(
+                {
+                    "operation": "fps",
+                    "params": {"input_file": "in.mp4", "fps": "30", "output_file": "out.mp4"},
+                }
+            ),
             content_type="application/json",
         )
         body = res.get_json()
@@ -43,10 +45,12 @@ class TestPreviewEndpoint(unittest.TestCase):
     def test_resize_preview(self):
         res = self.client.post(
             "/api/preview",
-            data=json.dumps({
-                "operation": "resize",
-                "params": {"input_file": "in.mp4", "width": "1280", "height": "720", "output_file": "out.mp4"},
-            }),
+            data=json.dumps(
+                {
+                    "operation": "resize",
+                    "params": {"input_file": "in.mp4", "width": "1280", "height": "720", "output_file": "out.mp4"},
+                }
+            ),
             content_type="application/json",
         )
         body = res.get_json()

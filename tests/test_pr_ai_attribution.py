@@ -5,6 +5,7 @@ from scripts.pr_ai_attribution import (
     START_MARKER,
     build_new_body,
     extract_coauthors,
+    remove_session_urls,
     render_section,
     replace_section,
 )
@@ -145,3 +146,51 @@ class TestBuildNewBody(unittest.TestCase):
         self.assertIn("- Claude Opus 5.5（1 コミット）", result)
         self.assertIn("トレーラーの無いコミット: 1 件", result)
         self.assertTrue(result.startswith("本文"))
+
+
+SESSION_URL = "https://claude.ai/code/session_019abcDEF"
+
+
+class TestRemoveSessionUrls(unittest.TestCase):
+    def test_セッションのURLだけの行を消す(self):
+        body = f"本文\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\n{SESSION_URL}\n"
+
+        result = remove_session_urls(body)
+
+        self.assertEqual(result, "本文\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n")
+
+    def test_URLが無い本文はそのまま(self):
+        body = "## 概要\n本文\n\n末尾\n"
+
+        self.assertEqual(remove_session_urls(body), body)
+
+    def test_文中で触れたURLの行は消さない(self):
+        body = f"`{SESSION_URL}` のような URL を書かない\n"
+
+        self.assertEqual(remove_session_urls(body), body)
+
+    def test_前後の空白があってもURLだけの行なら消す(self):
+        body = f"本文\n  {SESSION_URL}  \n末尾\n"
+
+        self.assertEqual(remove_session_urls(body), "本文\n末尾\n")
+
+    def test_CRLFの本文でもURLの行を消す(self):
+        body = f"本文\r\n\r\n{SESSION_URL}\r\n"
+
+        self.assertEqual(remove_session_urls(body), "本文\r\n")
+
+    def test_URLが途中にあっても前後の行は残る(self):
+        body = f"上\n\n{SESSION_URL}\n\n下\n"
+
+        self.assertEqual(remove_session_urls(body), "上\n\n下\n")
+
+
+class TestBuildNewBodyRemovesSessionUrl(unittest.TestCase):
+    def test_URLの行を消しAIの区画は残す(self):
+        body = f"## 概要\n本文\n\n{START_MARKER}\n{END_MARKER}\n\n{SESSION_URL}\n"
+
+        result = build_new_body(CLAUDE_COMMIT, body)
+
+        self.assertNotIn(SESSION_URL, result)
+        self.assertIn("- Claude Opus 5.5（1 コミット）", result)
+        self.assertTrue(result.startswith("## 概要\n本文\n\n" + START_MARKER))
