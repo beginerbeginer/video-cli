@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.strict.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["node", "vitest/globals"]
+  },
+  "include": ["vite.config.ts", "eslint.config.ts", "config-tests", ".storybook/main.ts"]
+}
