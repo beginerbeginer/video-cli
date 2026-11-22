@@ -124,9 +124,12 @@ def _build_command(operation: str, params: dict) -> list[str]:
             return build_compress_command(p["input_file"], p["output_file"], int(p.get("crf", 23)))
         case "crop":
             return build_crop_command(
-                p["input_file"], p["output_file"],
-                int(p["width"]), int(p["height"]),
-                int(p.get("x", 0)), int(p.get("y", 0)),
+                p["input_file"],
+                p["output_file"],
+                int(p["width"]),
+                int(p["height"]),
+                int(p.get("x", 0)),
+                int(p.get("y", 0)),
             )
         case _:
             raise ValueError(f"未対応の操作: {operation}")
@@ -156,8 +159,9 @@ def _run_info(params: dict) -> Response:
             yield f"data: {json.dumps({'log': f'エラー: {exc}', 'error': True})}\n\n"
             yield f"data: {json.dumps({'done': True, 'returncode': 1})}\n\n"
 
-    return Response(generate(), mimetype="text/event-stream",
-                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+    return Response(
+        generate(), mimetype="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
 
 
 def _run_concat(params: dict) -> Response:
@@ -170,16 +174,18 @@ def _run_concat(params: dict) -> Response:
             command = build_concat_copy_command(list_path, output_file)
             yield from _iter_command(command)
 
-    return Response(generate(), mimetype="text/event-stream",
-                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+    return Response(
+        generate(), mimetype="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
 
 
 def _stream_command(command: list[str]) -> Response:
     def generate():
         yield from _iter_command(command)
 
-    return Response(generate(), mimetype="text/event-stream",
-                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+    return Response(
+        generate(), mimetype="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
 
 
 def _iter_command(command: list[str]):

@@ -1,0 +1,33 @@
+name: release-please
+
+on:
+  push:
+    branches: [main]
+  # マージを待たずにリリース用の PR を作り直したいとき用
+  workflow_dispatch:
+
+# issues: write は、リリース用の PR に付けるラベル（autorelease: pending など）を作るため。
+# release-please-action の README が必要としている権限で、無いとラベル付けで失敗する。
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      # Why not タグ（@v5）: この Action には contents: write を渡すので、
+      # タグを付け替えられても中身が変わらないよう SHA で固定する。SHA は v5.0.0。
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          # Why not GITHUB_TOKEN だけ: GITHUB_TOKEN で作った PR や push ではほかのワークフローが起動せず、
+          # リリース用の PR が CI 待ちのまま止まる。Secret が未登録なら空になるので、そのときは今までどおり github.token に戻す。
+          # Why not PR で動くワークフローにも渡す: 外部からの PR で Secret が読まれないよう、push と手動実行だけで使う。
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

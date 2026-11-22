@@ -50,9 +50,7 @@ class TestRunCompressIteration(unittest.TestCase):
     @patch("usecases.compress_flow.build_compress_summary")
     @patch("usecases.shared_flow.handle_generic_review")
     @patch("usecases.compress_flow.execute_compress")
-    def test_run_compress_iteration_execute_path(
-        self, mock_execute, mock_review, mock_summary, mock_collect
-    ):
+    def test_run_compress_iteration_execute_path(self, mock_execute, mock_review, mock_summary, mock_collect):
         form = CompressForm()
         updated = CompressForm(input_file="in.mp4", crf_raw="18", output_file="out.mp4")
         mock_collect.return_value = (updated, object())
@@ -67,9 +65,7 @@ class TestRunCompressIteration(unittest.TestCase):
     @patch("usecases.compress_flow.build_compress_summary")
     @patch("usecases.shared_flow.handle_generic_review")
     @patch("usecases.compress_flow.execute_compress")
-    def test_run_compress_iteration_dry_run_path(
-        self, mock_execute, mock_review, mock_summary, mock_collect
-    ):
+    def test_run_compress_iteration_dry_run_path(self, mock_execute, mock_review, mock_summary, mock_collect):
         form = CompressForm()
         updated = CompressForm(input_file="in.mp4", crf_raw="18", output_file="out.mp4")
         mock_collect.return_value = (updated, object())
