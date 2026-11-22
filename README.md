@@ -170,6 +170,18 @@ video-cli/
 uv run pytest
 ```
 
+CI では、テストの前に lint と整形の確認も行う。push する前に、手元でも同じものを打っておく。
+
+```bash
+uv run ruff check .
+```
+
+```bash
+uv run ruff format --check .
+```
+
+整形がずれていたら `uv run ruff format .` で直す。
+
 ## 設計方針
 
 - `handle_*_review`: Dictionary Dispatch で action → FlowResult を変換
