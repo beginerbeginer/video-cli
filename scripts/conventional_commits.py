@@ -77,9 +77,11 @@ def _check_commits(log_path: str) -> int:
     git_log = Path(log_path).read_text(encoding="utf-8")
     problems = check_commits(git_log)
     session_commits = find_session_trailers(git_log)
-    # Why not 失敗にする: 既存の PR の古いコミットを書き換え（force-push）させたくない。
-    # PR はマージコミットで取り込むので、release-please が読むのは PR タイトルではなく各コミット。
-    # 形の違うコミットはリリースに載らないので、気づけるよう警告は出す。
+    # Why not 失敗にする: PR は Squash でマージするので、release-please が読むのは PR タイトルだけで、
+    # PR の中のコミットの形はリリースに影響しない（issue #127）。それなのに失敗にすると、古いコミットを
+    # 書き換え（force-push）させることになる。
+    # Why not 確認をやめる: Squash の本文を手で足すと、コミットの 1 行目や Claude-Session が main に入りうる。
+    # レビューで理由を追えるようにする決まりも残るので、警告として出し続ける。
     for header, error in problems:
         print(f"::warning title=コミットメッセージ::{header} — {error}")
     for header in session_commits:
