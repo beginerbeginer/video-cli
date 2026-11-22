@@ -408,7 +408,7 @@ class TestCreateConcatListFile(unittest.TestCase):
     def test_single_quote_in_path_is_escaped(self):
         with create_concat_list_file(["/tmp/it's.mp4"]) as path:
             content = Path(path).read_text()
-        self.assertIn(r"'\''" , content)
+        self.assertIn(r"'\''", content)
 
 
 class TestBuildCompressCommand(unittest.TestCase):
