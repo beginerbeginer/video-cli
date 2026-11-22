@@ -117,9 +117,7 @@ def edit_concat_form(form: ConcatForm, ui: UIPort) -> ConcatForm:
     field = ui.ask_menu("修正したい項目を選んでください", fields)
 
     if field == "count_raw":
-        value = require_non_empty(
-            ui.ask_text("結合本数を再入力してください", default=form.count_raw), "結合本数"
-        )
+        value = require_non_empty(ui.ask_text("結合本数を再入力してください", default=form.count_raw), "結合本数")
         return replace(form, count_raw=value)
 
     if field == "output_file":
